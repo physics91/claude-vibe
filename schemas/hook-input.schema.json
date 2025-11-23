@@ -1,0 +1,254 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://physics91.com/agents-context-preserver/schemas/hook-input.schema.json",
+  "title": "HookInput",
+  "description": "Common input structure for AGENTS Context Preserver plugin hooks",
+  "type": "object",
+  "required": ["hook_type", "timestamp", "session_id", "context"],
+  "properties": {
+    "hook_type": {
+      "type": "string",
+      "description": "Type of hook being invoked",
+      "enum": ["pre_compact", "session_start", "post_tool_use", "stop"],
+      "examples": ["pre_compact", "post_tool_use"]
+    },
+    "timestamp": {
+      "type": "string",
+      "description": "ISO8601 timestamp when the hook was invoked",
+      "format": "date-time",
+      "examples": ["2024-01-15T10:30:00Z"]
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Current session identifier",
+      "minLength": 1,
+      "maxLength": 128,
+      "examples": ["session-2024-01-15-abc123"]
+    },
+    "context": {
+      "type": "object",
+      "description": "Current context state snapshot",
+      "$ref": "context-state.schema.json"
+    },
+    "trigger": {
+      "type": "object",
+      "description": "Information about what triggered this hook",
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Reason for the hook invocation",
+          "maxLength": 500,
+          "examples": ["token_limit_reached", "user_request", "session_timeout"]
+        },
+        "metadata": {
+          "type": "object",
+          "description": "Additional metadata about the trigger",
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "hook_type": { "const": "post_tool_use" }
+        }
+      },
+      "then": {
+        "properties": {
+          "tool_data": {
+            "$ref": "#/definitions/ToolData"
+          }
+        },
+        "required": ["tool_data"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "hook_type": { "const": "pre_compact" }
+        }
+      },
+      "then": {
+        "properties": {
+          "compaction_data": {
+            "$ref": "#/definitions/CompactionData"
+          }
+        },
+        "required": ["compaction_data"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "hook_type": { "const": "session_start" }
+        }
+      },
+      "then": {
+        "properties": {
+          "session_data": {
+            "$ref": "#/definitions/SessionStartData"
+          }
+        },
+        "required": ["session_data"]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "hook_type": { "const": "stop" }
+        }
+      },
+      "then": {
+        "properties": {
+          "stop_data": {
+            "$ref": "#/definitions/StopData"
+          }
+        },
+        "required": ["stop_data"]
+      }
+    }
+  ],
+  "definitions": {
+    "ToolData": {
+      "type": "object",
+      "description": "Data specific to post_tool_use hook",
+      "required": ["tool_name", "input", "output", "duration_ms", "success"],
+      "properties": {
+        "tool_name": {
+          "type": "string",
+          "description": "Name of the tool that was used",
+          "maxLength": 100,
+          "examples": ["Read", "Write", "Bash", "Grep", "Edit"]
+        },
+        "input": {
+          "type": "object",
+          "description": "Input parameters passed to the tool",
+          "additionalProperties": true,
+          "examples": [{"file_path": "/src/index.ts"}]
+        },
+        "output": {
+          "description": "Output returned by the tool (may be truncated)",
+          "examples": ["File contents...", {"status": "success"}]
+        },
+        "duration_ms": {
+          "type": "integer",
+          "description": "Execution duration in milliseconds",
+          "minimum": 0,
+          "examples": [150, 1200]
+        },
+        "success": {
+          "type": "boolean",
+          "description": "Whether the tool execution was successful"
+        },
+        "error": {
+          "type": "string",
+          "description": "Error message if the tool failed",
+          "maxLength": 1000,
+          "examples": ["File not found: /src/missing.ts"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "CompactionData": {
+      "type": "object",
+      "description": "Data specific to pre_compact hook",
+      "required": ["current_token_count", "target_token_count", "compaction_strategy"],
+      "properties": {
+        "current_token_count": {
+          "type": "integer",
+          "description": "Current estimated token count",
+          "minimum": 0,
+          "examples": [45000]
+        },
+        "target_token_count": {
+          "type": "integer",
+          "description": "Target token count after compaction",
+          "minimum": 0,
+          "examples": [20000]
+        },
+        "compaction_strategy": {
+          "type": "string",
+          "description": "Strategy being used for compaction",
+          "enum": ["truncate", "summarize", "prioritize", "hybrid"],
+          "default": "hybrid",
+          "examples": ["hybrid"]
+        },
+        "items_to_remove": {
+          "type": "integer",
+          "description": "Number of history items that will be removed",
+          "minimum": 0,
+          "examples": [5]
+        }
+      },
+      "additionalProperties": false
+    },
+    "SessionStartData": {
+      "type": "object",
+      "description": "Data specific to session_start hook",
+      "required": ["is_restoration", "working_directory"],
+      "properties": {
+        "is_restoration": {
+          "type": "boolean",
+          "description": "Whether this session is being restored from saved state",
+          "examples": [true, false]
+        },
+        "previous_session_id": {
+          "type": "string",
+          "description": "ID of the previous session if this is a restoration",
+          "maxLength": 128,
+          "examples": ["session-2024-01-14-xyz789"]
+        },
+        "working_directory": {
+          "type": "string",
+          "description": "Current working directory for the session",
+          "maxLength": 500,
+          "examples": ["/home/user/project", "E:\\projects\\my-app"]
+        },
+        "initial_prompt": {
+          "type": "string",
+          "description": "The initial prompt or command that started the session",
+          "maxLength": 5000,
+          "examples": ["Implement user authentication"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "StopData": {
+      "type": "object",
+      "description": "Data specific to stop hook",
+      "required": ["reason", "session_duration_ms"],
+      "properties": {
+        "reason": {
+          "type": "string",
+          "description": "Reason for session stop",
+          "enum": ["user_request", "task_complete", "error", "timeout", "interrupt"],
+          "examples": ["task_complete", "user_request"]
+        },
+        "session_duration_ms": {
+          "type": "integer",
+          "description": "Total session duration in milliseconds",
+          "minimum": 0,
+          "examples": [3600000]
+        },
+        "final_status": {
+          "type": "string",
+          "description": "Final status of the session",
+          "enum": ["success", "partial", "failed", "cancelled"],
+          "default": "success",
+          "examples": ["success", "partial"]
+        },
+        "error_message": {
+          "type": "string",
+          "description": "Error message if session ended due to error",
+          "maxLength": 1000,
+          "examples": ["Connection timeout after 30 seconds"]
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,13 @@
+# Test outputs
+test-output.txt
+test-results.xml
+e2e-test-results.xml
+test-input.json
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+Thumbs.db
+.DS_Store

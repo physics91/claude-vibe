@@ -1,0 +1,279 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://physics91.com/agents-context-preserver/schemas/context-state.schema.json",
+  "title": "ContextState",
+  "description": "Main context state for AGENTS Context Preserver plugin",
+  "type": "object",
+  "required": [
+    "version",
+    "session_id",
+    "created_at",
+    "updated_at",
+    "agents_md",
+    "task_context",
+    "working_context",
+    "tool_history",
+    "metadata"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Schema version for compatibility checking",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "examples": ["1.0.0"]
+    },
+    "session_id": {
+      "type": "string",
+      "description": "Unique identifier for the current session",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "created_at": {
+      "type": "string",
+      "description": "ISO8601 timestamp when the context was created",
+      "format": "date-time"
+    },
+    "updated_at": {
+      "type": "string",
+      "description": "ISO8601 timestamp when the context was last updated",
+      "format": "date-time"
+    },
+    "agents_md": {
+      "type": "object",
+      "description": "AGENTS.md file contents and metadata",
+      "properties": {
+        "global": {
+          "oneOf": [
+            { "$ref": "#/definitions/AgentsMdFile" },
+            { "type": "null" }
+          ],
+          "description": "Global AGENTS.md configuration"
+        },
+        "project": {
+          "oneOf": [
+            { "$ref": "#/definitions/AgentsMdFile" },
+            { "type": "null" }
+          ],
+          "description": "Project-level AGENTS.md configuration"
+        },
+        "local": {
+          "type": "array",
+          "description": "Local directory-specific AGENTS.md files",
+          "items": {
+            "$ref": "#/definitions/AgentsMdFile"
+          },
+          "maxItems": 50
+        },
+        "merged": {
+          "oneOf": [
+            { "$ref": "#/definitions/MergedAgentsMd" },
+            { "type": "null" }
+          ],
+          "description": "Merged configuration from all AGENTS.md files"
+        }
+      },
+      "additionalProperties": false
+    },
+    "task_context": {
+      "type": "object",
+      "description": "Current task state and progress information",
+      "properties": {
+        "objective": {
+          "type": "string",
+          "description": "The main objective of the current task",
+          "maxLength": 1000
+        },
+        "steps_completed": {
+          "type": "array",
+          "description": "List of completed task steps",
+          "items": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "maxItems": 20
+        },
+        "key_decisions": {
+          "type": "array",
+          "description": "Key decisions made during the task",
+          "items": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "maxItems": 20
+        },
+        "current_phase": {
+          "type": "string",
+          "description": "Current phase of the task",
+          "maxLength": 200
+        }
+      },
+      "additionalProperties": false
+    },
+    "working_context": {
+      "type": "object",
+      "description": "Current working state including files and environment",
+      "properties": {
+        "files": {
+          "type": "array",
+          "description": "Files currently being worked on",
+          "items": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "maxItems": 20
+        },
+        "recent_errors": {
+          "type": "array",
+          "description": "Recent errors encountered during the session",
+          "items": {
+            "$ref": "#/definitions/ErrorEntry"
+          },
+          "maxItems": 10
+        },
+        "environment": {
+          "type": "object",
+          "description": "Environment information",
+          "properties": {
+            "cwd": {
+              "type": "string",
+              "description": "Current working directory"
+            },
+            "permission_mode": {
+              "type": "string",
+              "description": "Permission mode of the session"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "tool_history": {
+      "type": "array",
+      "description": "Recent tool usage history",
+      "items": {
+        "$ref": "#/definitions/ToolHistoryEntry"
+      },
+      "maxItems": 50
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Plugin metadata and statistics",
+      "properties": {
+        "hook_event": {
+          "type": "string",
+          "description": "The hook event that triggered this context save"
+        },
+        "project_root": {
+          "type": "string",
+          "description": "Project root directory"
+        },
+        "context_size_bytes": {
+          "type": "integer",
+          "description": "Size of the context in bytes",
+          "minimum": 0
+        },
+        "pruned": {
+          "type": "boolean",
+          "description": "Whether the context was pruned to meet size limits"
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "definitions": {
+    "AgentsMdFile": {
+      "type": "object",
+      "description": "AGENTS.md file content and metadata",
+      "required": ["path", "hash"],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Path to the AGENTS.md file",
+          "maxLength": 500
+        },
+        "content": {
+          "type": "string",
+          "description": "Content of the AGENTS.md file",
+          "maxLength": 100000
+        },
+        "hash": {
+          "type": "string",
+          "description": "SHA-256 hash of the content for change detection",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "truncated": {
+          "type": "boolean",
+          "description": "Whether the content was truncated due to size limits"
+        }
+      },
+      "additionalProperties": false
+    },
+    "MergedAgentsMd": {
+      "type": "object",
+      "description": "Merged AGENTS.md configuration",
+      "properties": {
+        "sections": {
+          "type": "array",
+          "description": "Merged sections from all AGENTS.md files",
+          "items": {
+            "type": "object"
+          }
+        },
+        "subagents": {
+          "type": "array",
+          "description": "Defined subagents",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "description": { "type": "string" },
+              "trigger": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "key_instructions": {
+          "type": "array",
+          "description": "Key instructions extracted from AGENTS.md",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "ErrorEntry": {
+      "type": "object",
+      "description": "An error entry",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Type of error"
+        },
+        "message": {
+          "type": "string",
+          "description": "Error message"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ToolHistoryEntry": {
+      "type": "object",
+      "description": "A single tool usage entry in the history",
+      "properties": {
+        "tool": {
+          "type": "string",
+          "description": "Name of the tool that was used",
+          "maxLength": 100
+        },
+        "target": {
+          "type": "string",
+          "description": "Target of the tool operation",
+          "maxLength": 500
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

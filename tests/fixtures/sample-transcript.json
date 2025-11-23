@@ -1,0 +1,117 @@
+{
+  "_comment": "Sample Claude Code transcript for testing context preservation",
+  "session_id": "session-2024-01-15-abc123",
+  "started_at": "2024-01-15T10:30:00Z",
+  "messages": [
+    {
+      "type": "user",
+      "timestamp": "2024-01-15T10:30:00Z",
+      "content": "I need to implement a new feature for user authentication. Can you help me create a login component?"
+    },
+    {
+      "type": "assistant",
+      "timestamp": "2024-01-15T10:30:15Z",
+      "content": "I'll help you create a login component. Let me first check the existing authentication setup and then create the component.\n\nLet me start by examining the current project structure.",
+      "tool_calls": [
+        {
+          "tool": "Glob",
+          "parameters": {
+            "pattern": "**/auth/**/*.ts"
+          },
+          "result": [
+            "src/auth/AuthService.ts",
+            "src/auth/types.ts"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "user",
+      "timestamp": "2024-01-15T10:31:00Z",
+      "content": "Yes, please check the AuthService first and then create the component."
+    },
+    {
+      "type": "assistant",
+      "timestamp": "2024-01-15T10:31:30Z",
+      "content": "I'll read the AuthService to understand the existing authentication logic.",
+      "tool_calls": [
+        {
+          "tool": "Read",
+          "parameters": {
+            "file_path": "/project/src/auth/AuthService.ts"
+          },
+          "result": "export class AuthService {\n  async login(email: string, password: string): Promise<AuthResult> {\n    // Authentication logic\n  }\n}"
+        },
+        {
+          "tool": "TodoWrite",
+          "parameters": {
+            "todos": [
+              {
+                "content": "Review existing AuthService implementation",
+                "status": "completed",
+                "activeForm": "Reviewing existing AuthService implementation"
+              },
+              {
+                "content": "Create LoginComponent with form validation",
+                "status": "in_progress",
+                "activeForm": "Creating LoginComponent with form validation"
+              },
+              {
+                "content": "Add unit tests for LoginComponent",
+                "status": "pending",
+                "activeForm": "Adding unit tests for LoginComponent"
+              },
+              {
+                "content": "Update documentation",
+                "status": "pending",
+                "activeForm": "Updating documentation"
+              }
+            ]
+          },
+          "result": "Todo list updated"
+        }
+      ]
+    },
+    {
+      "type": "assistant",
+      "timestamp": "2024-01-15T10:32:00Z",
+      "content": "Now I'll create the LoginComponent based on the AuthService interface.",
+      "tool_calls": [
+        {
+          "tool": "Write",
+          "parameters": {
+            "file_path": "/project/src/components/LoginComponent.tsx",
+            "content": "import React, { useState } from 'react';\nimport { AuthService } from '../auth/AuthService';\n\nexport const LoginComponent: React.FC = () => {\n  const [email, setEmail] = useState('');\n  const [password, setPassword] = useState('');\n  \n  const handleSubmit = async () => {\n    const authService = new AuthService();\n    await authService.login(email, password);\n  };\n  \n  return (\n    <form onSubmit={handleSubmit}>\n      <input type=\"email\" value={email} onChange={e => setEmail(e.target.value)} />\n      <input type=\"password\" value={password} onChange={e => setPassword(e.target.value)} />\n      <button type=\"submit\">Login</button>\n    </form>\n  );\n};"
+          },
+          "result": "File written successfully"
+        }
+      ]
+    },
+    {
+      "type": "user",
+      "timestamp": "2024-01-15T10:33:00Z",
+      "content": "Great! Now let's add form validation and error handling."
+    },
+    {
+      "type": "assistant",
+      "timestamp": "2024-01-15T10:33:30Z",
+      "content": "I'll update the LoginComponent to include comprehensive form validation and error handling.",
+      "tool_calls": [
+        {
+          "tool": "Edit",
+          "parameters": {
+            "file_path": "/project/src/components/LoginComponent.tsx",
+            "old_string": "const [password, setPassword] = useState('');",
+            "new_string": "const [password, setPassword] = useState('');\n  const [error, setError] = useState<string | null>(null);\n  const [isLoading, setIsLoading] = useState(false);"
+          },
+          "result": "File edited successfully"
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "project_path": "/project",
+    "total_tokens_used": 15420,
+    "tools_used": ["Glob", "Read", "Write", "Edit", "TodoWrite"]
+  }
+}

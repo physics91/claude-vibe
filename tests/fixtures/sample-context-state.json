@@ -1,0 +1,122 @@
+{
+  "_comment": "Valid context state matching the plugin schema",
+  "version": "1.0.0",
+  "timestamp": "2024-01-15T10:35:00Z",
+  "session_id": "session-2024-01-15-abc123",
+
+  "task_context": {
+    "current_objective": "Implement user authentication feature with login component",
+    "progress_summary": "Created LoginComponent with basic form structure. Need to add validation and error handling.",
+    "key_decisions": [
+      "Using React functional components with hooks",
+      "Integrating with existing AuthService",
+      "Form validation will be client-side with Yup schema"
+    ],
+    "blockers": [],
+    "next_steps": [
+      "Add form validation using Yup",
+      "Implement error handling and display",
+      "Write unit tests for LoginComponent",
+      "Update documentation"
+    ]
+  },
+
+  "active_todos": [
+    {
+      "content": "Create LoginComponent with form validation",
+      "status": "in_progress",
+      "activeForm": "Creating LoginComponent with form validation"
+    },
+    {
+      "content": "Add unit tests for LoginComponent",
+      "status": "pending",
+      "activeForm": "Adding unit tests for LoginComponent"
+    },
+    {
+      "content": "Update documentation",
+      "status": "pending",
+      "activeForm": "Updating documentation"
+    }
+  ],
+
+  "working_files": [
+    {
+      "path": "src/components/LoginComponent.tsx",
+      "status": "modified",
+      "last_modified": "2024-01-15T10:33:30Z",
+      "summary": "New login component with email/password form"
+    },
+    {
+      "path": "src/auth/AuthService.ts",
+      "status": "read",
+      "last_modified": "2024-01-10T08:00:00Z",
+      "summary": "Existing authentication service with login method"
+    },
+    {
+      "path": "src/auth/types.ts",
+      "status": "read",
+      "last_modified": "2024-01-10T08:00:00Z",
+      "summary": "Type definitions for authentication"
+    }
+  ],
+
+  "tool_history": [
+    {
+      "tool": "Glob",
+      "timestamp": "2024-01-15T10:30:15Z",
+      "summary": "Found auth-related TypeScript files",
+      "result_preview": "Found 2 files in src/auth/"
+    },
+    {
+      "tool": "Read",
+      "timestamp": "2024-01-15T10:31:30Z",
+      "summary": "Read AuthService.ts to understand authentication logic",
+      "result_preview": "AuthService class with login method"
+    },
+    {
+      "tool": "Write",
+      "timestamp": "2024-01-15T10:32:00Z",
+      "summary": "Created LoginComponent.tsx",
+      "result_preview": "File written successfully"
+    },
+    {
+      "tool": "Edit",
+      "timestamp": "2024-01-15T10:33:30Z",
+      "summary": "Added error and loading state to LoginComponent",
+      "result_preview": "File edited successfully"
+    }
+  ],
+
+  "conversation_summary": "User requested help implementing user authentication. Started by examining existing AuthService, then created a new LoginComponent with basic form structure. Currently working on adding form validation and error handling.",
+
+  "important_context": [
+    "Project uses React with TypeScript",
+    "Existing AuthService has login(email, password) method",
+    "Form validation will use Yup schema",
+    "Need to maintain compatibility with existing auth types"
+  ],
+
+  "subagent_triggers": [
+    {
+      "agent": "code-reviewer",
+      "condition": "After completing LoginComponent implementation",
+      "priority": "high"
+    },
+    {
+      "agent": "test-runner",
+      "condition": "After adding unit tests",
+      "priority": "medium"
+    }
+  ],
+
+  "metadata": {
+    "total_messages": 6,
+    "total_tool_calls": 5,
+    "estimated_tokens": 15420,
+    "project_path": "E:\\ai-dev\\physics91-claude-plugin",
+    "agents_files_found": [
+      "C:\\Users\\physi\\.claude\\AGENTS.md",
+      "E:\\ai-dev\\physics91-claude-plugin\\AGENTS.md"
+    ]
+  }
+}
