@@ -18,9 +18,9 @@ function New-ClarificationPrompt {
 
     # Build clarification message
     $clarificationMessage = @"
-## 🔍 프롬프트 명확화 필요
+## Prompt Clarification Needed
 
-입력하신 프롬프트가 다소 모호할 수 있습니다. 더 정확한 결과를 위해 아래 질문에 답변해 주세요:
+Your prompt may be somewhat ambiguous. Please answer the following questions for more accurate results:
 
 "@
 
@@ -33,15 +33,15 @@ function New-ClarificationPrompt {
     $clarificationMessage += @"
 
 
-### 💡 더 나은 프롬프트를 위한 팁:
-- **구체적인 기술 스택** 명시 (예: React, Node.js, PostgreSQL)
-- **파일 경로**나 **코드 위치** 언급
-- **원하는 결과**를 명확하게 설명
-- **제약사항**이나 **요구사항** 명시
+### Tips for Better Prompts:
+- Specify **concrete tech stack** (e.g., React, Node.js, PostgreSQL)
+- Mention **file paths** or **code locations**
+- Clearly explain **desired results**
+- Specify **constraints** or **requirements**
 
 ---
-*원래 프롬프트:* "$($AnalysisResult.OriginalPrompt)"
-*모호도 점수:* $($AnalysisResult.AmbiguityScore)/100
+*Original Prompt:* "$($AnalysisResult.OriginalPrompt)"
+*Ambiguity Score:* $($AnalysisResult.AmbiguityScore)/100
 "@
 
     return $clarificationMessage
@@ -91,62 +91,62 @@ function Format-QuickSurvey {
     )
 
     $survey = @{
-        Title     = "프롬프트 명확화 설문"
+        Title     = "Prompt Clarification Survey"
         Questions = @()
     }
 
     # Generate survey questions based on analysis
     if ($AnalysisResult.Reasons -contains "MISSING_TECH_STACK") {
         $survey.Questions += @{
-            Question = "사용하고 싶은 기술 스택이 있나요?"
+            Question = "What tech stack would you like to use?"
             Type     = "multiple_choice"
             Options  = @(
                 "React + Node.js + MongoDB",
                 "Vue + Express + PostgreSQL",
                 "Vanilla JS + Python + SQLite",
-                "직접 입력"
+                "Custom input"
             )
         }
     }
 
     if ($AnalysisResult.Reasons -contains "MISSING_DETAILS") {
         $survey.Questions += @{
-            Question = "주요 기능을 선택해주세요 (여러 개 선택 가능)"
+            Question = "Select main features (multiple selection allowed)"
             Type     = "checkbox"
             Options  = @(
-                "사용자 인증/로그인",
-                "데이터 CRUD",
-                "파일 업로드",
-                "실시간 통신",
-                "결제 시스템",
-                "관리자 대시보드"
+                "User authentication/login",
+                "Database CRUD",
+                "File upload",
+                "Real-time communication",
+                "Payment system",
+                "Admin dashboard"
             )
         }
     }
 
     if ($AnalysisResult.Reasons -contains "VAGUE_OPTIMIZATION") {
         $survey.Questions += @{
-            Question = "어떤 최적화를 원하시나요?"
+            Question = "What optimization would you like?"
             Type     = "multiple_choice"
             Options  = @(
-                "실행 속도/성능 개선",
-                "메모리 사용량 감소",
-                "번들 크기 축소",
-                "코드 가독성 향상",
-                "모두"
+                "Execution speed/performance improvement",
+                "Memory usage reduction",
+                "Bundle size reduction",
+                "Code readability improvement",
+                "All of the above"
             )
         }
     }
 
     if ($AnalysisResult.Reasons -contains "INSUFFICIENT_REQUIREMENTS") {
         $survey.Questions += @{
-            Question = "프로젝트 규모는 어느 정도인가요?"
+            Question = "What is the project scale?"
             Type     = "multiple_choice"
             Options  = @(
-                "간단한 프로토타입/MVP",
-                "중소 규모 프로젝트",
-                "대규모 엔터프라이즈급",
-                "잘 모르겠음"
+                "Simple prototype/MVP",
+                "Small to medium project",
+                "Large enterprise-grade",
+                "Not sure"
             )
         }
     }

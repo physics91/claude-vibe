@@ -11,12 +11,12 @@ function Test-PromptAmbiguity {
     $ambiguityReasons = @()
     $questions = @()
 
-    # 1. Check prompt length (너무 짧은 프롬프트)
+    # 1. Check prompt length (too short)
     $wordCount = ($Prompt -split '\s+').Count
     if ($wordCount -lt 5) {
         $ambiguityScore += 30
         $ambiguityReasons += "TOO_SHORT"
-        $questions += "구체적으로 어떤 작업을 원하시나요?"
+        $questions += "What specific task would you like to accomplish?"
     }
 
     # 2. Check for vague verbs
