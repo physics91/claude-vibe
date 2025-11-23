@@ -22,5 +22,17 @@
         }
       ]
     }
+  ],
+  "UserPromptSubmit": [
+    {
+      "matcher": "",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "powershell -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/user-prompt-submit.ps1\"",
+          "timeout": 5000
+        }
+      ]
+    }
   ]
 }

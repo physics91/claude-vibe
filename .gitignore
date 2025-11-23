@@ -11,3 +11,4 @@ test-input.json
 # OS
 Thumbs.db
 .DS_Store
+logs/
