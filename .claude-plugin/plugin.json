@@ -1,7 +1,7 @@
 {
   "name": "agents-context-preserver",
   "version": "0.0.1",
-  "description": "Claude Code hooks를 활용하여 세션 컴팩션 시 AGENTS.md 컨텍스트를 자동으로 보존/복원하는 플러그인",
+  "description": "A Claude Code plugin that automatically preserves and restores AGENTS.md context during session compaction",
   "author": {
     "name": "physics91",
     "url": "https://github.com/physics91"

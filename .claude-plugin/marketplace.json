@@ -8,7 +8,7 @@
     {
       "name": "agents-context-preserver",
       "source": "./",
-      "description": "세션 컴팩션 시 AGENTS.md 컨텍스트 자동 보존/복원",
+      "description": "Automatically preserves and restores AGENTS.md context during session compaction",
       "version": "0.0.1",
       "author": {
         "name": "physics91"

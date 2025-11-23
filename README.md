@@ -1,27 +1,29 @@
 # AGENTS Context Preserver
 
-Claude Code hooks를 활용하여 세션 컴팩션 시 AGENTS.md 컨텍스트를 자동으로 보존/복원하는 플러그인.
+A Claude Code plugin that automatically preserves and restores AGENTS.md context during session compaction using hooks.
 
-## 설치
+[한국어 문서](./README.ko.md)
 
-### 방법 1: 플러그인 명령어 (권장)
+## Installation
+
+### Method 1: Plugin Command (Recommended)
 
 ```bash
-# 마켓플레이스 추가
-/plugin marketplace add physics91/claude-plugins
+# Add marketplace
+/plugin marketplace add physics91/claude-vibe
 
-# 플러그인 설치
+# Install plugin
 /plugin install agents-context-preserver@physics91
 ```
 
-### 방법 2: 수동 설치
+### Method 2: Manual Installation
 
 ```powershell
-# 1. 프로젝트 클론
+# 1. Clone repository
 git clone https://github.com/physics91/claude-vibe.git
 cd claude-vibe
 
-# 2. settings.json에 hooks 직접 등록
+# 2. Register hooks in settings.json
 ```
 
 ```json
@@ -43,37 +45,38 @@ cd claude-vibe
 }
 ```
 
-## 구조
+## Structure
 
 ```
 ├── .claude-plugin/
-│   └── plugin.json        # 플러그인 매니페스트
+│   ├── plugin.json        # Plugin manifest
+│   └── marketplace.json   # Marketplace definition
 ├── hooks/
-│   ├── hooks.json         # 훅 설정
-│   ├── pre-compact.ps1    # 컴팩션 전 컨텍스트 캡처
-│   └── session-start.ps1  # 세션 시작 시 컨텍스트 복원
+│   ├── hooks.json         # Hook configuration
+│   ├── pre-compact.ps1    # Captures context before compaction
+│   └── session-start.ps1  # Restores context on session start
 ├── lib/
 │   ├── core/
-│   │   ├── parser.ps1     # AGENTS.md 파싱
-│   │   └── storage.ps1    # 상태 저장/로드
+│   │   ├── parser.ps1     # AGENTS.md parser
+│   │   └── storage.ps1    # State storage/loading
 │   └── utils/
-│       └── security.ps1   # 보안 유틸리티
-├── schemas/               # JSON 스키마
-└── tests/                 # 테스트
+│       └── security.ps1   # Security utilities
+├── schemas/               # JSON schemas
+└── tests/                 # Tests
 ```
 
-## 주요 기능
+## Features
 
-- AGENTS.md 자동 파싱 (프로젝트/글로벌/로컬)
-- 컴팩션 시 컨텍스트 자동 저장
-- 세션 시작 시 컨텍스트 자동 복원
-- 작업 상태 추적
+- Automatic AGENTS.md parsing (project/global/local)
+- Automatic context saving on compaction
+- Automatic context restoration on session start
+- Task state tracking
 
-## 요구사항
+## Requirements
 
-- Windows PowerShell 5.1+ 또는 PowerShell Core 7+
+- Windows PowerShell 5.1+ or PowerShell Core 7+
 - Claude Code v1.0.0+
 
-## 라이선스
+## License
 
 MIT
