@@ -1,0 +1,20 @@
+{
+  "name": "physics91-plugins",
+  "owner": {
+    "name": "physics91",
+    "url": "https://github.com/physics91"
+  },
+  "plugins": [
+    {
+      "name": "agents-context-preserver",
+      "source": "https://github.com/physics91/claude-vibe.git",
+      "description": "세션 컴팩션 시 AGENTS.md 컨텍스트 자동 보존/복원",
+      "version": "0.0.1",
+      "author": {
+        "name": "physics91"
+      },
+      "license": "MIT",
+      "keywords": ["agents", "context", "compaction"]
+    }
+  ]
+}
