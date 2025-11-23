@@ -45,6 +45,39 @@ cd claude-vibe
 }
 ```
 
+## Updating
+
+### Update to Latest Version
+
+**Method 1: Reinstall via Plugin Command (Recommended)**
+
+```bash
+# Reinstall to get the latest version
+/plugin install claude-vibe@physics91
+```
+
+**Method 2: Manual Update**
+
+```bash
+# Navigate to plugin directory
+cd ~/.claude/plugins/claude-vibe
+
+# Pull latest changes
+git pull origin main
+```
+
+### Check Current Version
+
+Check your installed version in `.claude-plugin/plugin.json`:
+
+```bash
+cat ~/.claude/plugins/claude-vibe/.claude-plugin/plugin.json | grep version
+```
+
+Or check the [CHANGELOG.md](./CHANGELOG.md) for version history and release notes.
+
+**Note:** Claude Code currently does not have automatic plugin updates. You need to manually update when new versions are released.
+
 ## Structure
 
 ```

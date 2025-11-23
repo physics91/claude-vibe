@@ -43,6 +43,39 @@ cd claude-vibe
 }
 ```
 
+## 업데이트
+
+### 최신 버전으로 업데이트
+
+**방법 1: 플러그인 명령어로 재설치 (권장)**
+
+```bash
+# 재설치하여 최신 버전으로 업데이트
+/plugin install claude-vibe@physics91
+```
+
+**방법 2: 수동 업데이트**
+
+```bash
+# 플러그인 디렉토리로 이동
+cd ~/.claude/plugins/claude-vibe
+
+# 최신 변경사항 가져오기
+git pull origin main
+```
+
+### 현재 버전 확인
+
+`.claude-plugin/plugin.json`에서 설치된 버전 확인:
+
+```bash
+cat ~/.claude/plugins/claude-vibe/.claude-plugin/plugin.json | grep version
+```
+
+또는 [CHANGELOG.md](./CHANGELOG.md)에서 버전 히스토리와 릴리즈 노트를 확인하세요.
+
+**참고:** Claude Code는 현재 자동 플러그인 업데이트를 지원하지 않습니다. 새 버전이 출시되면 수동으로 업데이트해야 합니다.
+
 ## 구조
 
 ```
