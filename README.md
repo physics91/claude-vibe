@@ -13,7 +13,7 @@ A comprehensive Claude Code plugin that enhances your AI-assisted development wo
 /plugin marketplace add physics91/claude-vibe
 
 # Install plugin
-/plugin install agents-context-preserver@physics91
+/plugin install claude-vibe@physics91
 ```
 
 ### Method 2: Manual Installation

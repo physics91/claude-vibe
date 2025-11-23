@@ -11,7 +11,7 @@ AI 기반 개발 워크플로우를 향상시키는 종합 Claude Code 플러그
 /plugin marketplace add physics91/claude-vibe
 
 # 플러그인 설치
-/plugin install agents-context-preserver@physics91
+/plugin install claude-vibe@physics91
 ```
 
 ### 방법 2: 수동 설치

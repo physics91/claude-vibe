@@ -1,7 +1,7 @@
 {
-  "name": "agents-context-preserver",
-  "version": "0.0.1",
-  "description": "A Claude Code plugin that automatically preserves and restores AGENTS.md context during session compaction",
+  "name": "claude-vibe",
+  "version": "0.1.0",
+  "description": "A comprehensive Claude Code plugin with intelligent context management and vibe coding support through interactive prompt clarification",
   "author": {
     "name": "physics91",
     "url": "https://github.com/physics91"
@@ -10,11 +10,16 @@
   "repository": "https://github.com/physics91/claude-vibe.git",
   "license": "MIT",
   "keywords": [
+    "vibe-coding",
+    "prompt-clarification",
     "agents",
     "context",
     "compaction",
     "session",
-    "preservation"
+    "preservation",
+    "interactive",
+    "skill"
   ],
-  "hooks": "./hooks"
+  "hooks": "./hooks",
+  "skills": "./skills"
 }
