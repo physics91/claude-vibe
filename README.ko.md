@@ -133,8 +133,16 @@ cat ~/.claude/plugins/claude-vibe/.claude-plugin/plugin.json | grep version
 
 ## 요구사항
 
-- Windows PowerShell 5.1+ 또는 PowerShell Core 7+
+### 모든 플랫폼
 - Claude Code v1.0.0+
+- Bash 쉘 (모든 주요 플랫폼에서 사용 가능)
+
+### 플랫폼별 요구사항
+- **Windows**: PowerShell 5.1+ 또는 PowerShell Core 7+ (래퍼 스크립트가 자동 선택)
+- **Linux/macOS**: Bash 4.0+ (래퍼 스크립트가 자동 선택)
+
+**크로스 플랫폼 지원:**
+이 플러그인은 플랫폼 감지 래퍼 스크립트를 통해 Windows, Linux, macOS를 지원합니다. 운영 체제에 따라 적절한 스크립트(.ps1 또는 .sh)가 자동으로 선택됩니다.
 
 ## 사용 예제
 

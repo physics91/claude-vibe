@@ -135,8 +135,16 @@ The Vibe Coding Assistant helps you write better prompts by:
 
 ## Requirements
 
-- Windows PowerShell 5.1+ or PowerShell Core 7+
+### All Platforms
 - Claude Code v1.0.0+
+- Bash shell (available on all major platforms)
+
+### Platform-Specific
+- **Windows**: PowerShell 5.1+ or PowerShell Core 7+ (automatically used by wrapper scripts)
+- **Linux/macOS**: Bash 4.0+ (automatically used by wrapper scripts)
+
+**Cross-Platform Support:**
+This plugin now supports Windows, Linux, and macOS through platform detection wrapper scripts. The appropriate script (.ps1 or .sh) is automatically selected based on your operating system.
 
 ## Usage Examples
 

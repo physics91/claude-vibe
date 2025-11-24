@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# Cross-platform wrapper for session-start hook
+# Detects OS and runs appropriate script
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Detect OS
+if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [[ "$OS" == "Windows_NT" ]]; then
+    # Windows - use PowerShell
+    powershell -ExecutionPolicy Bypass -File "$SCRIPT_DIR/session-start.ps1"
+else
+    # Linux/macOS - use Bash
+    bash "$SCRIPT_DIR/session-start.sh"
+fi

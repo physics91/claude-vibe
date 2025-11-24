@@ -5,7 +5,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "powershell -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/pre-compact.ps1\"",
+          "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/pre-compact\"",
           "timeout": 5000
         }
       ]
@@ -17,7 +17,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "powershell -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.ps1\"",
+          "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start\"",
           "timeout": 5000
         }
       ]
@@ -29,7 +29,7 @@
       "hooks": [
         {
           "type": "command",
-          "command": "powershell -ExecutionPolicy Bypass -File \"${CLAUDE_PLUGIN_ROOT}/hooks/user-prompt-submit.ps1\"",
+          "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/user-prompt-submit\"",
           "timeout": 5000
         }
       ]
