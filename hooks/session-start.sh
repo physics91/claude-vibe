@@ -3,7 +3,7 @@
 # Restores context on session start
 # NOTE: This is a basic implementation. Full context restoration requires parser.sh and storage.sh
 
-set -e
+set -euo pipefail
 
 # Get plugin root directory
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-}"

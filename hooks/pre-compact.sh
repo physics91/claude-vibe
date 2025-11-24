@@ -3,7 +3,7 @@
 # Captures context before compaction
 # NOTE: This is a basic implementation. Full AGENTS.md parsing requires parser.sh
 
-set -e
+set -euo pipefail
 
 # Get plugin root directory
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-}"

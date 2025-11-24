@@ -111,13 +111,52 @@ test_prompt_ambiguity() {
         is_ambiguous=true
     fi
 
-    # Return results as JSON-like output
-    echo "IS_AMBIGUOUS=$is_ambiguous"
-    echo "AMBIGUITY_SCORE=$ambiguity_score"
-    echo "REASONS=${ambiguity_reasons[*]}"
-    printf 'QUESTION_%d=%s\n' "${!questions[@]}" "${questions[@]}"
-    echo "QUESTION_COUNT=${#questions[@]}"
-    echo "ORIGINAL_PROMPT=$prompt"
+    # Escape JSON string (replace quotes, backslashes, newlines)
+    escape_json() {
+        local str="$1"
+        # Replace backslash, then quotes, then newlines/tabs
+        str="${str//\\/\\\\}"
+        str="${str//\"/\\\"}"
+        str="${str//$'\n'/\\n}"
+        str="${str//$'\t'/\\t}"
+        str="${str//$'\r'/\\r}"
+        echo "$str"
+    }
+
+    # Build questions JSON array
+    local questions_json="["
+    local first=true
+    for question in "${questions[@]}"; do
+        if [ "$first" = false ]; then
+            questions_json+=","
+        fi
+        questions_json+="\"$(escape_json "$question")\""
+        first=false
+    done
+    questions_json+="]"
+
+    # Build reasons JSON array
+    local reasons_json="["
+    first=true
+    for reason in "${ambiguity_reasons[@]}"; do
+        if [ "$first" = false ]; then
+            reasons_json+=","
+        fi
+        reasons_json+="\"$(escape_json "$reason")\""
+        first=false
+    done
+    reasons_json+="]"
+
+    # Output as proper JSON
+    cat <<EOF
+{
+  "is_ambiguous": $is_ambiguous,
+  "ambiguity_score": $ambiguity_score,
+  "reasons": $reasons_json,
+  "questions": $questions_json,
+  "original_prompt": "$(escape_json "$prompt")"
+}
+EOF
 }
 
 # Export function for use by other scripts

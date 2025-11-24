@@ -2,7 +2,7 @@
 # User Prompt Submit Hook (Bash version)
 # Analyzes user prompts and requests clarification if ambiguous
 
-set -e
+set -euo pipefail
 
 # Get plugin root directory
 PLUGIN_ROOT="${CLAUDE_PLUGIN_ROOT:-}"
@@ -26,31 +26,43 @@ if [ ! -f "$ANALYZER_PATH" ]; then
 fi
 source "$ANALYZER_PATH"
 
-# Analyze the prompt
-ANALYSIS=$(test_prompt_ambiguity "$USER_PROMPT")
+# Analyze the prompt (returns JSON)
+ANALYSIS_JSON=$(test_prompt_ambiguity "$USER_PROMPT")
+
+# Parse JSON safely without eval (using grep and sed)
+parse_json_bool() {
+    echo "$ANALYSIS_JSON" | grep -o "\"$1\": *[^,}]*" | sed 's/.*: *//' | tr -d ' '
+}
+
+parse_json_number() {
+    echo "$ANALYSIS_JSON" | grep -o "\"$1\": *[0-9]*" | sed 's/.*: *//'
+}
+
+parse_json_array() {
+    # Extract array content between brackets
+    local array_content=$(echo "$ANALYSIS_JSON" | sed -n "s/.*\"$1\": *\[\([^]]*\)\].*/\1/p")
+    # Split by comma and remove quotes
+    echo "$array_content" | sed 's/"//g' | sed 's/\\n/\n/g'
+}
 
 # Parse analysis results
-IS_AMBIGUOUS=$(echo "$ANALYSIS" | grep "^IS_AMBIGUOUS=" | cut -d= -f2)
-AMBIGUITY_SCORE=$(echo "$ANALYSIS" | grep "^AMBIGUITY_SCORE=" | cut -d= -f2)
-REASONS=$(echo "$ANALYSIS" | grep "^REASONS=" | cut -d= -f2-)
-QUESTION_COUNT=$(echo "$ANALYSIS" | grep "^QUESTION_COUNT=" | cut -d= -f2)
-
-# Parse questions
-QUESTIONS=()
-for i in $(seq 0 $((QUESTION_COUNT - 1))); do
-    question=$(echo "$ANALYSIS" | grep "^QUESTION_$i=" | cut -d= -f2-)
-    QUESTIONS+=("$question")
-done
+IS_AMBIGUOUS=$(parse_json_bool "is_ambiguous")
+AMBIGUITY_SCORE=$(parse_json_number "ambiguity_score")
 
 # If prompt is ambiguous, activate Prompt Clarifier Skill
 if [ "$IS_AMBIGUOUS" = "true" ]; then
-    # Build suggested question topics
-    QUESTION_TOPICS=""
-    for question in "${QUESTIONS[@]}"; do
-        QUESTION_TOPICS+="- $question"$'\n'
-    done
+    # Parse reasons and questions arrays
+    REASONS=$(parse_json_array "reasons" | tr '\n' ',' | sed 's/,$//' | tr ',' ' ')
 
-    # Build conditional instructions
+    # Build question topics
+    QUESTION_TOPICS=""
+    while IFS= read -r question; do
+        if [ -n "$question" ]; then
+            QUESTION_TOPICS+="- $question"$'\n'
+        fi
+    done < <(parse_json_array "questions")
+
+    # Build conditional instructions based on reasons
     CONDITIONAL_INSTRUCTIONS=""
     if echo "$REASONS" | grep -q "MISSING_TECH_STACK"; then
         CONDITIONAL_INSTRUCTIONS+="   - Technology stack preferences"$'\n'
@@ -106,10 +118,12 @@ Timestamp: $(date +"%Y-%m-%d %H:%M:%S")
 Original Prompt: $USER_PROMPT
 Ambiguity Score: $AMBIGUITY_SCORE
 Reasons: $REASONS
-Questions Generated: $QUESTION_COUNT
 
 Questions:
 $QUESTION_TOPICS
+
+JSON Output:
+$ANALYSIS_JSON
 EOF
 fi
 

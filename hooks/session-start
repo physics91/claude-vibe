@@ -2,15 +2,63 @@
 # Cross-platform wrapper for session-start hook
 # Detects OS and runs appropriate script
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Detect OS
-if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]] || [[ "$OS" == "Windows_NT" ]]; then
-    # Windows - use PowerShell
-    powershell -ExecutionPolicy Bypass -File "$SCRIPT_DIR/session-start.ps1"
+# Detect PowerShell availability (prefer pwsh over powershell)
+detect_powershell() {
+    if command -v pwsh &> /dev/null; then
+        echo "pwsh"
+    elif command -v powershell &> /dev/null; then
+        echo "powershell"
+    else
+        echo ""
+    fi
+}
+
+# Improved platform detection
+is_windows_environment() {
+    # Check multiple indicators for Windows/Windows-like environments
+    case "$OSTYPE" in
+        msys*|mingw*|cygwin*|win32)
+            # MSYS2, MinGW, Cygwin, Git Bash
+            return 0
+            ;;
+        linux*)
+            # Check if running under WSL
+            if [ -f /proc/version ] && grep -qi microsoft /proc/version; then
+                # WSL detected - treat as Windows environment
+                return 0
+            fi
+            return 1
+            ;;
+        darwin*|freebsd*|netbsd*|openbsd*)
+            # macOS, BSD - use bash
+            return 1
+            ;;
+        *)
+            # Unknown - check environment variables as fallback
+            if [ -n "${OS:-}" ] && [ "$OS" = "Windows_NT" ]; then
+                return 0
+            fi
+            return 1
+            ;;
+    esac
+}
+
+# Execute appropriate script
+if is_windows_environment; then
+    # Windows environment - use PowerShell if available
+    PWSH=$(detect_powershell)
+    if [ -n "$PWSH" ]; then
+        exec "$PWSH" -ExecutionPolicy Bypass -File "$SCRIPT_DIR/session-start.ps1"
+    else
+        # Fallback to Bash on Windows (Cygwin/MSYS/WSL scenario)
+        echo "Warning: PowerShell not found, falling back to Bash implementation" >&2
+        exec bash "$SCRIPT_DIR/session-start.sh"
+    fi
 else
-    # Linux/macOS - use Bash
-    bash "$SCRIPT_DIR/session-start.sh"
+    # Unix/Linux/macOS - use Bash
+    exec bash "$SCRIPT_DIR/session-start.sh"
 fi
