@@ -11,9 +11,16 @@ import argparse
 
 def encode_analysis(is_ambiguous, score, reasons, questions, prompt):
     """Encode analysis results as JSON"""
+    # Validate and convert score to integer
+    try:
+        score_int = int(score)
+    except (ValueError, TypeError) as e:
+        print(f"Error: Invalid score value '{score}' - must be a number", file=sys.stderr)
+        sys.exit(1)
+
     data = {
         "is_ambiguous": is_ambiguous == "true",
-        "ambiguity_score": int(score),
+        "ambiguity_score": score_int,
         "reasons": reasons,
         "questions": questions,
         "original_prompt": prompt
@@ -60,7 +67,13 @@ def extract_field(json_str, field_name):
     """Extract a single field from JSON"""
     try:
         data = json.loads(json_str)
-        value = data.get(field_name)
+
+        # Check if field exists (distinguish from null value)
+        if field_name not in data:
+            print(f"Error: Field '{field_name}' not found in JSON", file=sys.stderr)
+            sys.exit(1)
+
+        value = data[field_name]
 
         if isinstance(value, bool):
             print('true' if value else 'false')
@@ -69,9 +82,14 @@ def extract_field(json_str, field_name):
         elif isinstance(value, str):
             print(value)
         elif isinstance(value, list):
-            # Output each element on a new line
+            # Output each element on a new line, ensuring valid JSON for complex types
             for item in value:
-                print(item)
+                if isinstance(item, (dict, list)):
+                    print(json.dumps(item))
+                else:
+                    print(item)
+        elif value is None:
+            print('null')
         else:
             print(json.dumps(value))
 
