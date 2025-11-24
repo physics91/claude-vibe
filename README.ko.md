@@ -136,6 +136,7 @@ cat ~/.claude/plugins/claude-vibe/.claude-plugin/plugin.json | grep version
 ### 모든 플랫폼
 - Claude Code v1.0.0+
 - Bash 쉘 (모든 주요 플랫폼에서 사용 가능)
+- **Python 2.7+ 또는 Python 3.x** (bash 훅의 JSON 처리에 필요)
 
 ### 플랫폼별 요구사항
 - **Windows**: PowerShell 5.1+ 또는 PowerShell Core 7+ (래퍼 스크립트가 자동 선택)

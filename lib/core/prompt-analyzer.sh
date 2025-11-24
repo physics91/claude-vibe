@@ -111,52 +111,30 @@ test_prompt_ambiguity() {
         is_ambiguous=true
     fi
 
-    # Escape JSON string (replace quotes, backslashes, newlines)
-    escape_json() {
-        local str="$1"
-        # Replace backslash, then quotes, then newlines/tabs
-        str="${str//\\/\\\\}"
-        str="${str//\"/\\\"}"
-        str="${str//$'\n'/\\n}"
-        str="${str//$'\t'/\\t}"
-        str="${str//$'\r'/\\r}"
-        echo "$str"
-    }
+    # Find Python (prefer python3, fallback to python)
+    # Test actual execution, not just existence (Windows symlink issues)
+    local python_cmd=""
+    if command -v python3 &> /dev/null && python3 --version &> /dev/null; then
+        python_cmd="python3"
+    elif command -v python &> /dev/null && python --version &> /dev/null; then
+        python_cmd="python"
+    else
+        # Fallback: output basic JSON without Python
+        echo "{\"error\":\"Python not found\",\"is_ambiguous\":$is_ambiguous,\"ambiguity_score\":$ambiguity_score}" >&2
+        return 1
+    fi
 
-    # Build questions JSON array
-    local questions_json="["
-    local first=true
-    for question in "${questions[@]}"; do
-        if [ "$first" = false ]; then
-            questions_json+=","
-        fi
-        questions_json+="\"$(escape_json "$question")\""
-        first=false
-    done
-    questions_json+="]"
+    # Get script directory for json-helper.py
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local json_helper="$script_dir/json-helper.py"
 
-    # Build reasons JSON array
-    local reasons_json="["
-    first=true
-    for reason in "${ambiguity_reasons[@]}"; do
-        if [ "$first" = false ]; then
-            reasons_json+=","
-        fi
-        reasons_json+="\"$(escape_json "$reason")\""
-        first=false
-    done
-    reasons_json+="]"
-
-    # Output as proper JSON
-    cat <<EOF
-{
-  "is_ambiguous": $is_ambiguous,
-  "ambiguity_score": $ambiguity_score,
-  "reasons": $reasons_json,
-  "questions": $questions_json,
-  "original_prompt": "$(escape_json "$prompt")"
-}
-EOF
+    # Use Python for safe JSON encoding
+    "$python_cmd" "$json_helper" encode \
+        --is-ambiguous "$is_ambiguous" \
+        --score "$ambiguity_score" \
+        --reasons "${ambiguity_reasons[@]}" \
+        --questions "${questions[@]}" \
+        --prompt "$prompt"
 }
 
 # Export function for use by other scripts

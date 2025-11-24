@@ -138,6 +138,7 @@ The Vibe Coding Assistant helps you write better prompts by:
 ### All Platforms
 - Claude Code v1.0.0+
 - Bash shell (available on all major platforms)
+- **Python 2.7+ or Python 3.x** (required for JSON processing in bash hooks)
 
 ### Platform-Specific
 - **Windows**: PowerShell 5.1+ or PowerShell Core 7+ (automatically used by wrapper scripts)

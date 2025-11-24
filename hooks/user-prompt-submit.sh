@@ -18,6 +18,18 @@ if [ -z "$USER_PROMPT" ]; then
     exit 0
 fi
 
+# Find Python (prefer python3, fallback to python)
+# Test actual execution, not just existence (Windows symlink issues)
+PYTHON_CMD=""
+if command -v python3 &> /dev/null && python3 --version &> /dev/null; then
+    PYTHON_CMD="python3"
+elif command -v python &> /dev/null && python --version &> /dev/null; then
+    PYTHON_CMD="python"
+else
+    echo "Error: Python not found. Python 2.7+ or 3.x is required." >&2
+    exit 1
+fi
+
 # Import analyzer module
 ANALYZER_PATH="$PLUGIN_ROOT/lib/core/prompt-analyzer.sh"
 if [ ! -f "$ANALYZER_PATH" ]; then
@@ -29,30 +41,26 @@ source "$ANALYZER_PATH"
 # Analyze the prompt (returns JSON)
 ANALYSIS_JSON=$(test_prompt_ambiguity "$USER_PROMPT")
 
-# Parse JSON safely without eval (using grep and sed)
-parse_json_bool() {
-    echo "$ANALYSIS_JSON" | grep -o "\"$1\": *[^,}]*" | sed 's/.*: *//' | tr -d ' '
-}
+# Check if analysis succeeded
+if [ $? -ne 0 ]; then
+    echo "Error: Prompt analysis failed" >&2
+    exit 1
+fi
 
-parse_json_number() {
-    echo "$ANALYSIS_JSON" | grep -o "\"$1\": *[0-9]*" | sed 's/.*: *//'
-}
+# Use Python to safely extract fields from JSON
+JSON_HELPER="$PLUGIN_ROOT/lib/core/json-helper.py"
 
-parse_json_array() {
-    # Extract array content between brackets
-    local array_content=$(echo "$ANALYSIS_JSON" | sed -n "s/.*\"$1\": *\[\([^]]*\)\].*/\1/p")
-    # Split by comma and remove quotes
-    echo "$array_content" | sed 's/"//g' | sed 's/\\n/\n/g'
-}
-
-# Parse analysis results
-IS_AMBIGUOUS=$(parse_json_bool "is_ambiguous")
-AMBIGUITY_SCORE=$(parse_json_number "ambiguity_score")
+# Extract fields using Python
+IS_AMBIGUOUS=$("$PYTHON_CMD" "$JSON_HELPER" extract "is_ambiguous" <<< "$ANALYSIS_JSON")
+AMBIGUITY_SCORE=$("$PYTHON_CMD" "$JSON_HELPER" extract "ambiguity_score" <<< "$ANALYSIS_JSON")
 
 # If prompt is ambiguous, activate Prompt Clarifier Skill
 if [ "$IS_AMBIGUOUS" = "true" ]; then
-    # Parse reasons and questions arrays
-    REASONS=$(parse_json_array "reasons" | tr '\n' ',' | sed 's/,$//' | tr ',' ' ')
+    # Extract reasons as space-separated values
+    REASONS=$("$PYTHON_CMD" "$JSON_HELPER" extract "reasons" <<< "$ANALYSIS_JSON" | tr '\n' ' ')
+
+    # Extract questions (one per line)
+    QUESTIONS_RAW=$("$PYTHON_CMD" "$JSON_HELPER" extract "questions" <<< "$ANALYSIS_JSON")
 
     # Build question topics
     QUESTION_TOPICS=""
@@ -60,7 +68,7 @@ if [ "$IS_AMBIGUOUS" = "true" ]; then
         if [ -n "$question" ]; then
             QUESTION_TOPICS+="- $question"$'\n'
         fi
-    done < <(parse_json_array "questions")
+    done <<< "$QUESTIONS_RAW"
 
     # Build conditional instructions based on reasons
     CONDITIONAL_INSTRUCTIONS=""
