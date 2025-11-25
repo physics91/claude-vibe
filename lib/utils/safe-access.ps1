@@ -56,7 +56,8 @@ function Test-PropertyExists {
     }
 
     if ($Object -is [System.Management.Automation.PSCustomObject]) {
-        return $Object.PSObject.Properties.Name -contains $PropertyName
+        # Use indexer for O(1) lookup instead of O(N) array scan
+        return $null -ne $Object.PSObject.Properties[$PropertyName]
     }
 
     # For other types, try to get the property
@@ -91,6 +92,7 @@ function Test-PropertyExists {
 #>
 function Get-SafeProperty {
     [CmdletBinding()]
+    [OutputType([object])]
     param(
         [Parameter(Mandatory = $true)]
         [AllowNull()]
@@ -116,8 +118,10 @@ function Get-SafeProperty {
     }
 
     if ($Object -is [System.Management.Automation.PSCustomObject]) {
-        if ($Object.PSObject.Properties.Name -contains $PropertyName) {
-            $value = $Object.$PropertyName
+        # Use indexer for O(1) lookup instead of O(N) array scan
+        $prop = $Object.PSObject.Properties[$PropertyName]
+        if ($null -ne $prop) {
+            $value = $prop.Value
             if ($null -ne $value) {
                 return $value
             }
@@ -202,6 +206,7 @@ function Get-PropertyNames {
 #>
 function Get-NestedProperty {
     [CmdletBinding()]
+    [OutputType([object])]
     param(
         [Parameter(Mandatory = $true)]
         [AllowNull()]
@@ -219,7 +224,14 @@ function Get-NestedProperty {
         return $Default
     }
 
-    $parts = $Path -split '\.'
+    # Split path and filter out empty segments (handles 'a..b' or trailing dots)
+    $parts = $Path -split '\.' | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+
+    if ($parts.Count -eq 0) {
+        Write-Verbose "Path '$Path' contains no valid segments"
+        return $Default
+    }
+
     $current = $Object
 
     foreach ($part in $parts) {
@@ -227,15 +239,12 @@ function Get-NestedProperty {
             return $Default
         }
 
-        if (-not (Test-PropertyExists -Object $current -PropertyName $part)) {
+        # Single lookup: try to get value directly, avoiding redundant existence check
+        $current = Get-SafeProperty -Object $current -PropertyName $part -Default $null
+
+        if ($null -eq $current) {
             return $Default
         }
-
-        $current = Get-SafeProperty -Object $current -PropertyName $part
-    }
-
-    if ($null -eq $current) {
-        return $Default
     }
 
     return $current
@@ -269,6 +278,7 @@ function Copy-SafeProperties {
         $Source,
 
         [Parameter(Mandatory = $true)]
+        [ValidateNotNull()]
         [hashtable]$Target,
 
         [Parameter(Mandatory = $true)]
@@ -280,11 +290,16 @@ function Copy-SafeProperties {
     }
 
     foreach ($prop in $Properties) {
-        if (Test-PropertyExists -Object $Source -PropertyName $prop) {
-            $value = Get-SafeProperty -Object $Source -PropertyName $prop
-            if ($null -ne $value) {
-                $Target[$prop] = $value
-            }
+        # Skip null or empty property names
+        if ([string]::IsNullOrWhiteSpace($prop)) {
+            Write-Verbose "Skipping null or empty property name"
+            continue
+        }
+
+        # Single lookup: get value directly
+        $value = Get-SafeProperty -Object $Source -PropertyName $prop -Default $null
+        if ($null -ne $value) {
+            $Target[$prop] = $value
         }
     }
 

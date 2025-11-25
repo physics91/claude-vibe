@@ -281,6 +281,34 @@ Test-Case "New-DirectorySafe creates and returns directory" {
     }
 }
 
+# Test 32: Get-NestedProperty handles empty path segments gracefully
+Test-Case "Get-NestedProperty handles empty path segments" {
+    $obj = @{ a = @{ b = 123 } }
+    # Path with double dots should not throw
+    $result = Get-NestedProperty -Object $obj -Path 'a..b' -Default 'fallback'
+    if ($result -ne 123) { throw "Should handle double dots, got: $result" }
+}
+
+# Test 33: Copy-SafeProperties skips empty property names
+Test-Case "Copy-SafeProperties skips empty property names" {
+    $source = @{ valid = "value"; another = "data" }
+    $target = @{}
+    # Should not throw on empty properties and should skip them
+    $props = @('valid', '', '  ', 'missing')
+    $result = Copy-SafeProperties -Source $source -Target $target -Properties $props
+    if ($result.valid -ne 'value') { throw "Should copy valid property" }
+    if ($result.Count -ne 1) { throw "Should only have 1 property, got: $($result.Count)" }
+}
+
+# Test 34: Get-SafeProperty uses O(1) indexer lookup
+Test-Case "Get-SafeProperty works with PSCustomObject" {
+    $obj = [PSCustomObject]@{ name = "test"; nested = @{ value = 42 } }
+    $result = Get-SafeProperty -Object $obj -PropertyName 'name' -Default 'none'
+    if ($result -ne 'test') { throw "Should return 'test'" }
+    $result = Get-SafeProperty -Object $obj -PropertyName 'missing' -Default 'none'
+    if ($result -ne 'none') { throw "Should return default 'none'" }
+}
+
 # Summary
 Write-Host ""
 Write-Host "=== Summary ===" -ForegroundColor Cyan
