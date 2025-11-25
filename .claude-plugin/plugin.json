@@ -21,6 +21,5 @@
     "skill"
   ],
   "hooks": "./hooks",
-  "skills": "./skills",
-  "commands": "./commands"
+  "skills": "./skills"
 }
