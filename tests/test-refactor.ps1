@@ -168,6 +168,37 @@ Test-Case "Path constants are defined" {
     }
 }
 
+# Test 18: module-loader.ps1 loaded
+Test-Case "module-loader.ps1 loaded" {
+    if (-not (Test-Path "$PSScriptRoot\..\lib\utils\module-loader.ps1")) {
+        throw "File not found"
+    }
+}
+
+# Load module-loader for next tests
+. "$PSScriptRoot\..\lib\utils\module-loader.ps1"
+
+# Test 19: Test-TrustedPath function exists
+Test-Case "Test-TrustedPath function exists" {
+    $cmd = Get-Command Test-TrustedPath -ErrorAction Stop
+    if (-not $cmd) { throw "Function not found" }
+}
+
+# Test 20: Circular dependency detection variable exists
+Test-Case "LoadingInProgress tracking variable exists" {
+    $val = Get-Variable -Name 'LoadingInProgress' -Scope Script -ErrorAction SilentlyContinue
+    if ($null -eq $val) { throw "LoadingInProgress variable not found" }
+}
+
+# Test 21: MaxCommandFileSizeBytes constant defined
+Test-Case "MaxCommandFileSizeBytes constant defined" {
+    # Re-load command-manager to get the constant
+    . "$PSScriptRoot\..\lib\core\command-manager.ps1"
+    $val = Get-Variable -Name 'MaxCommandFileSizeBytes' -Scope Script -ErrorAction SilentlyContinue
+    if ($null -eq $val) { throw "MaxCommandFileSizeBytes not found" }
+    if ($val.Value -le 0) { throw "MaxCommandFileSizeBytes should be positive" }
+}
+
 # Summary
 Write-Host ""
 Write-Host "=== Summary ===" -ForegroundColor Cyan

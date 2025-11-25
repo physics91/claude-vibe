@@ -51,6 +51,9 @@ $script:MinCommandTokens = 50
 $script:MaxCommandTokens = 10000
 $script:DefaultCommandTokens = 150
 
+# File size limit (DoS prevention) - 100KB max for command files
+$script:MaxCommandFileSizeBytes = 102400
+
 # Valid command name pattern (alphanumeric, hyphen, underscore)
 $script:ValidCommandNamePattern = '^[a-zA-Z][a-zA-Z0-9_-]*$'
 
@@ -117,6 +120,19 @@ function Get-CommandInfo {
 
     if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
         Write-Verbose "Command file not found: $FilePath"
+        return $null
+    }
+
+    # Check file size before reading (DoS prevention)
+    try {
+        $fileInfo = Get-Item -LiteralPath $FilePath -ErrorAction Stop
+        if ($fileInfo.Length -gt $script:MaxCommandFileSizeBytes) {
+            Write-Warning "Command file too large: $FilePath ($($fileInfo.Length) bytes, max $script:MaxCommandFileSizeBytes)"
+            return $null
+        }
+    }
+    catch {
+        Write-Warning "Cannot check file size for '$FilePath': $($_.Exception.Message)"
         return $null
     }
 

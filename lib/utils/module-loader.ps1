@@ -15,6 +15,55 @@ $ErrorActionPreference = 'Stop'
     Version: 1.0.0
 #>
 
+#region Trusted Paths Configuration
+
+# Define trusted directories for module loading (dot-sourcing security)
+$script:TrustedModulePaths = @(
+    (Join-Path $PSScriptRoot ".." | Resolve-Path -ErrorAction SilentlyContinue).Path,  # lib folder
+    $PSScriptRoot  # utils folder
+)
+
+<#
+.SYNOPSIS
+    Validates that a path is within trusted directories.
+
+.PARAMETER Path
+    The path to validate.
+
+.OUTPUTS
+    $true if path is trusted, $false otherwise.
+#>
+function Test-TrustedPath {
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    try {
+        $resolvedPath = (Resolve-Path -LiteralPath $Path -ErrorAction Stop).Path
+        $normalizedPath = $resolvedPath.TrimEnd('\', '/')
+
+        foreach ($trustedPath in $script:TrustedModulePaths) {
+            if ($null -eq $trustedPath) { continue }
+            $normalizedTrusted = $trustedPath.TrimEnd('\', '/')
+            if ($normalizedPath.StartsWith($normalizedTrusted, [StringComparison]::OrdinalIgnoreCase)) {
+                return $true
+            }
+        }
+
+        Write-Warning "Path is not in trusted directories: $Path"
+        return $false
+    }
+    catch {
+        Write-Warning "Cannot resolve path for trust validation: $Path"
+        return $false
+    }
+}
+
+#endregion
+
 #region Module Dependency Registry
 
 # Define module dependency tree
@@ -38,6 +87,9 @@ $script:ModuleDependencies = @{
 
 # Track loaded modules
 $script:LoadedModules = @{}
+
+# Track loading in progress (for circular dependency detection)
+$script:LoadingInProgress = @{}
 
 #endregion
 
@@ -74,6 +126,12 @@ function Import-PluginModule {
         return $true
     }
 
+    # Check for circular dependency
+    if ($script:LoadingInProgress.ContainsKey($ModuleName)) {
+        Write-Warning "Circular dependency detected: '$ModuleName' is already being loaded"
+        return $false
+    }
+
     # Resolve module path if not provided
     if (-not $ModulePath) {
         $ModulePath = Resolve-ModulePath -ModuleName $ModuleName
@@ -89,18 +147,27 @@ function Import-PluginModule {
         return $false
     }
 
-    # Load dependencies first
-    if ($script:ModuleDependencies.ContainsKey($ModuleName)) {
-        foreach ($dependency in $script:ModuleDependencies[$ModuleName]) {
-            if (-not (Import-PluginModule -ModuleName $dependency)) {
-                Write-Warning "Failed to load dependency '$dependency' for module '$ModuleName'"
-                return $false
-            }
-        }
+    # Validate path is in trusted directories (security)
+    if (-not (Test-TrustedPath -Path $ModulePath)) {
+        Write-Warning "Module path is not trusted, refusing to load: $ModulePath"
+        return $false
     }
 
-    # Load the module
+    # Mark as loading in progress (for circular dependency detection)
+    $script:LoadingInProgress[$ModuleName] = $true
+
     try {
+        # Load dependencies first
+        if ($script:ModuleDependencies.ContainsKey($ModuleName)) {
+            foreach ($dependency in $script:ModuleDependencies[$ModuleName]) {
+                if (-not (Import-PluginModule -ModuleName $dependency)) {
+                    Write-Warning "Failed to load dependency '$dependency' for module '$ModuleName'"
+                    return $false
+                }
+            }
+        }
+
+        # Load the module
         . $ModulePath
         $script:LoadedModules[$ModuleName] = @{
             path = $ModulePath
@@ -112,6 +179,10 @@ function Import-PluginModule {
     catch {
         Write-Warning "Failed to load module '$ModuleName': $($_.Exception.Message)"
         return $false
+    }
+    finally {
+        # Remove from loading in progress
+        $script:LoadingInProgress.Remove($ModuleName)
     }
 }
 
@@ -278,7 +349,8 @@ if ($MyInvocation.MyCommand.ScriptBlock.Module) {
         'Test-ModuleLoaded',
         'Get-LoadedModules',
         'Test-ModuleDependencies',
-        'Get-ModuleDependencyTree'
+        'Get-ModuleDependencyTree',
+        'Test-TrustedPath'
     )
 }
 
