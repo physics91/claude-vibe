@@ -18,14 +18,48 @@ $ErrorActionPreference = 'Stop'
     Version: 1.0.0
 #>
 
+#region Module Dependencies
+# Required modules: conversion-helpers.ps1, constants.ps1
+
+$script:ModuleDependencies = @(
+    @{ Name = 'conversion-helpers'; Path = "$PSScriptRoot\..\utils\conversion-helpers.ps1" },
+    @{ Name = 'constants'; Path = "$PSScriptRoot\constants.ps1" }
+)
+
+foreach ($dep in $script:ModuleDependencies) {
+    if (-not (Test-Path -LiteralPath $dep.Path)) {
+        throw "Required module not found: $($dep.Name) at $($dep.Path)"
+    }
+    try {
+        . $dep.Path
+    }
+    catch {
+        throw "Failed to load required module '$($dep.Name)': $($_.Exception.Message)"
+    }
+}
+
+#endregion
+
 #region Configuration
 
 # Plugin root directory (parent of lib folder)
 $script:PluginRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $script:ManagedCommandsPath = Join-Path $script:PluginRoot "managed-commands"
 
-# Estimated tokens per command (based on typical prompt length)
+# Token estimation bounds
+$script:MinCommandTokens = 50
+$script:MaxCommandTokens = 10000
 $script:DefaultCommandTokens = 150
+
+# Valid command name pattern (alphanumeric, hyphen, underscore)
+$script:ValidCommandNamePattern = '^[a-zA-Z][a-zA-Z0-9_-]*$'
+
+# Known valid tool patterns for allowed-tools validation
+$script:ValidToolPatterns = @(
+    'Read', 'Write', 'Edit', 'Bash', 'Glob', 'Grep', 'Task',
+    'WebFetch', 'WebSearch', 'TodoWrite', 'AskUserQuestion',
+    'mcp__*', '*'  # MCP tools and wildcard
+)
 
 #endregion
 
@@ -77,35 +111,75 @@ function Get-CommandInfo {
     [OutputType([hashtable])]
     param(
         [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
         [string]$FilePath
     )
 
-    if (-not (Test-Path $FilePath)) {
+    if (-not (Test-Path -LiteralPath $FilePath -PathType Leaf)) {
+        Write-Verbose "Command file not found: $FilePath"
         return $null
     }
 
     try {
-        $content = Get-Content -Path $FilePath -Raw -Encoding UTF8
+        $content = Get-Content -LiteralPath $FilePath -Raw -Encoding UTF8 -ErrorAction Stop
+        if ([string]::IsNullOrWhiteSpace($content)) {
+            Write-Warning "Command file is empty: $FilePath"
+            return $null
+        }
+
         $fileName = [System.IO.Path]::GetFileNameWithoutExtension($FilePath)
 
-        # Parse frontmatter
+        # Validate command name format
+        if ($fileName -notmatch $script:ValidCommandNamePattern) {
+            Write-Warning "Invalid command name format '$fileName'. Must start with letter and contain only alphanumeric, hyphen, or underscore."
+            return $null
+        }
+
+        # Parse frontmatter with validation
         $description = ""
         $allowedTools = @()
+        $hasFrontmatter = $false
 
         if ($content -match '^---\r?\n([\s\S]*?)\r?\n---') {
+            $hasFrontmatter = $true
             $frontmatter = $Matches[1]
 
-            if ($frontmatter -match 'description:\s*(.+)') {
-                $description = $Matches[1].Trim()
+            # Validate frontmatter is not excessively long (prevent DoS)
+            if ($frontmatter.Length -gt 5000) {
+                Write-Warning "Frontmatter too long in '$fileName' (max 5000 chars)"
+                return $null
             }
 
+            # Parse description with sanitization
+            if ($frontmatter -match 'description:\s*(.+)') {
+                $rawDescription = $Matches[1].Trim()
+                # Sanitize: remove potential injection characters
+                $description = $rawDescription -replace '[<>{}]', ''
+                if ($description.Length -gt 500) {
+                    $description = $description.Substring(0, 500) + "..."
+                }
+            }
+
+            # Parse and validate allowed-tools
             if ($frontmatter -match 'allowed-tools:\s*(.+)') {
-                $allowedTools = $Matches[1].Split(',') | ForEach-Object { $_.Trim() }
+                $rawTools = $Matches[1].Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+                $allowedTools = @()
+
+                foreach ($tool in $rawTools) {
+                    # Validate tool name format
+                    if ($tool -match '^[a-zA-Z_*][a-zA-Z0-9_*-]*$') {
+                        $allowedTools += $tool
+                    }
+                    else {
+                        Write-Verbose "Ignoring invalid tool name in '$fileName': $tool"
+                    }
+                }
             }
         }
 
-        # Estimate tokens based on content length
-        $estimatedTokens = [math]::Max(50, [math]::Round($content.Length / 4))
+        # Estimate tokens with bounds checking
+        $rawTokenEstimate = [math]::Round($content.Length / 4)
+        $estimatedTokens = [math]::Max($script:MinCommandTokens, [math]::Min($script:MaxCommandTokens, $rawTokenEstimate))
 
         return @{
             name = $fileName
@@ -114,10 +188,11 @@ function Get-CommandInfo {
             allowedTools = $allowedTools
             estimatedTokens = $estimatedTokens
             contentLength = $content.Length
+            hasFrontmatter = $hasFrontmatter
         }
     }
     catch {
-        Write-Verbose "Failed to parse command file: $FilePath - $_"
+        Write-Warning "Failed to parse command file '$FilePath': $($_.Exception.Message)"
         return $null
     }
 }
@@ -191,28 +266,34 @@ function Enable-ProjectCommand {
         [string]$CommandName
     )
 
+    # Validate command name format
+    if ($CommandName -notmatch $script:ValidCommandNamePattern) {
+        Write-Warning "Invalid command name format: $CommandName"
+        return $false
+    }
+
     $sourcePath = Join-Path $script:ManagedCommandsPath "$CommandName.md"
 
-    if (-not (Test-Path $sourcePath)) {
+    if (-not (Test-Path -LiteralPath $sourcePath -PathType Leaf)) {
         Write-Warning "Managed command not found: $CommandName"
         return $false
     }
 
     # Ensure .claude/commands directory exists
     $targetDir = Join-Path $ProjectRoot ".claude\commands"
-    if (-not (Test-Path $targetDir)) {
+    if (-not (Test-Path -LiteralPath $targetDir)) {
         New-Item -Path $targetDir -ItemType Directory -Force | Out-Null
     }
 
     $targetPath = Join-Path $targetDir "$CommandName.md"
 
     try {
-        Copy-Item -Path $sourcePath -Destination $targetPath -Force
+        Copy-Item -LiteralPath $sourcePath -Destination $targetPath -Force
         Write-Verbose "Enabled command: $CommandName"
         return $true
     }
     catch {
-        Write-Warning "Failed to enable command $CommandName : $_"
+        Write-Warning "Failed to enable command '$CommandName': $($_.Exception.Message)"
         return $false
     }
 }
@@ -241,9 +322,15 @@ function Disable-ProjectCommand {
         [string]$CommandName
     )
 
+    # Validate command name format
+    if ($CommandName -notmatch $script:ValidCommandNamePattern) {
+        Write-Warning "Invalid command name format: $CommandName"
+        return $false
+    }
+
     $targetPath = Join-Path $ProjectRoot ".claude\commands\$CommandName.md"
 
-    if (-not (Test-Path $targetPath)) {
+    if (-not (Test-Path -LiteralPath $targetPath -PathType Leaf)) {
         Write-Verbose "Command already disabled: $CommandName"
         return $true
     }
@@ -258,12 +345,12 @@ function Disable-ProjectCommand {
     }
 
     try {
-        Remove-Item -Path $targetPath -Force
+        Remove-Item -LiteralPath $targetPath -Force
         Write-Verbose "Disabled command: $CommandName"
         return $true
     }
     catch {
-        Write-Warning "Failed to disable command $CommandName : $_"
+        Write-Warning "Failed to disable command '$CommandName': $($_.Exception.Message)"
         return $false
     }
 }

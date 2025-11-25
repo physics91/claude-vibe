@@ -172,13 +172,75 @@ function Read-JsonAsHashtable {
 
 #endregion
 
+#region Read-JsonFile
+
+<#
+.SYNOPSIS
+    Reads a JSON file and returns it as a PSCustomObject.
+
+.DESCRIPTION
+    Standardized JSON file reading that returns PSCustomObject for cases
+    where property access via dot notation is needed. Uses -LiteralPath
+    for path safety and proper error handling.
+
+.PARAMETER Path
+    The path to the JSON file to read.
+
+.PARAMETER DefaultValue
+    The default value to return if the file doesn't exist or fails to parse.
+    Default is $null.
+
+.OUTPUTS
+    System.Management.Automation.PSCustomObject or the DefaultValue
+
+.EXAMPLE
+    $config = Read-JsonFile -Path "config.json"
+
+.EXAMPLE
+    $preset = Read-JsonFile -Path "preset.json" -DefaultValue ([PSCustomObject]@{})
+#>
+function Read-JsonFile {
+    [CmdletBinding()]
+    [OutputType([PSCustomObject])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$Path,
+
+        [Parameter()]
+        $DefaultValue = $null
+    )
+
+    # Check file existence first
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) {
+        Write-Verbose "File not found: $Path"
+        return $DefaultValue
+    }
+
+    try {
+        $content = Get-Content -LiteralPath $Path -Raw -Encoding UTF8 -ErrorAction Stop
+        if ([string]::IsNullOrWhiteSpace($content)) {
+            Write-Verbose "File is empty: $Path"
+            return $DefaultValue
+        }
+        return $content | ConvertFrom-Json -ErrorAction Stop
+    }
+    catch {
+        Write-Warning "Failed to read JSON file '$Path': $($_.Exception.Message)"
+        return $DefaultValue
+    }
+}
+
+#endregion
+
 #region Module Export
 
 # Export functions (only when loaded as module)
 if ($MyInvocation.MyCommand.ScriptBlock.Module) {
     Export-ModuleMember -Function @(
         'ConvertTo-HashtableRecursive',
-        'Read-JsonAsHashtable'
+        'Read-JsonAsHashtable',
+        'Read-JsonFile'
     )
 }
 

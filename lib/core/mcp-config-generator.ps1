@@ -15,12 +15,34 @@ $ErrorActionPreference = 'Stop'
     Version: 1.0.0
 #>
 
-# Import preset manager
-. "$PSScriptRoot\preset-manager.ps1"
+#region Module Dependencies
+# Required modules: preset-manager.ps1
+
+$script:ModuleDependencies = @(
+    @{ Name = 'preset-manager'; Path = "$PSScriptRoot\preset-manager.ps1" }
+)
+
+foreach ($dep in $script:ModuleDependencies) {
+    if (-not (Test-Path -LiteralPath $dep.Path)) {
+        throw "Required module not found: $($dep.Name) at $($dep.Path)"
+    }
+    try {
+        . $dep.Path
+    }
+    catch {
+        throw "Failed to load required module '$($dep.Name)': $($_.Exception.Message)"
+    }
+}
+
+#endregion
+
+# Import constants for path configuration
+. "$PSScriptRoot\constants.ps1"
 
 #region Configuration
 
-$script:GlobalMcpConfigPath = Join-Path $env:USERPROFILE ".claude\claude_code_config.json"
+# Use configurable path from constants (supports CLAUDE_CONFIG_DIR env override)
+$script:GlobalMcpConfigPath = $script:GLOBAL_MCP_CONFIG_PATH
 
 #endregion
 
@@ -40,35 +62,28 @@ function Get-AvailableMcpServers {
 
     $servers = @{}
 
-    if (-not (Test-Path $script:GlobalMcpConfigPath)) {
-        Write-Verbose "Global MCP config not found: $script:GlobalMcpConfigPath"
+    $config = Read-JsonFile -Path $script:GlobalMcpConfigPath
+    if ($null -eq $config) {
+        Write-Verbose "Global MCP config not found or invalid: $script:GlobalMcpConfigPath"
         return $servers
     }
 
-    try {
-        $content = Get-Content -Path $script:GlobalMcpConfigPath -Raw -Encoding UTF8
-        $config = $content | ConvertFrom-Json
+    # Safely check for mcpServers property (StrictMode compatible)
+    $hasMcpServers = $config.PSObject.Properties.Name -contains 'mcpServers'
+    if ($hasMcpServers -and $null -ne $config.mcpServers) {
+        foreach ($prop in $config.mcpServers.PSObject.Properties) {
+            $serverValue = $prop.Value
+            $serverProps = $serverValue.PSObject.Properties.Name
 
-        # Safely check for mcpServers property (StrictMode compatible)
-        $hasMcpServers = $config.PSObject.Properties.Name -contains 'mcpServers'
-        if ($hasMcpServers -and $null -ne $config.mcpServers) {
-            foreach ($prop in $config.mcpServers.PSObject.Properties) {
-                $serverValue = $prop.Value
-                $serverProps = $serverValue.PSObject.Properties.Name
-
-                $servers[$prop.Name] = @{
-                    name = $prop.Name
-                    command = if ($serverProps -contains 'command') { $serverValue.command } else { $null }
-                    args = if ($serverProps -contains 'args') { $serverValue.args } else { $null }
-                    cwd = if ($serverProps -contains 'cwd') { $serverValue.cwd } else { $null }
-                    env = if ($serverProps -contains 'env') { $serverValue.env } else { $null }
-                    estimatedTokens = Get-EstimatedMcpTokens -ServerName $prop.Name
-                }
+            $servers[$prop.Name] = @{
+                name = $prop.Name
+                command = if ($serverProps -contains 'command') { $serverValue.command } else { $null }
+                args = if ($serverProps -contains 'args') { $serverValue.args } else { $null }
+                cwd = if ($serverProps -contains 'cwd') { $serverValue.cwd } else { $null }
+                env = if ($serverProps -contains 'env') { $serverValue.env } else { $null }
+                estimatedTokens = Get-EstimatedMcpTokens -ServerName $prop.Name
             }
         }
-    }
-    catch {
-        Write-Warning "Failed to load global MCP config: $_"
     }
 
     return $servers
@@ -330,19 +345,11 @@ function Get-ProjectMcpConfig {
 
     $mcpConfigPath = Join-Path $ProjectRoot ".claude\.mcp.json"
 
-    if (-not (Test-Path $mcpConfigPath)) {
+    $config = Read-JsonAsHashtable -Path $mcpConfigPath
+    if ($config.Count -eq 0) {
         return $null
     }
-
-    try {
-        $content = Get-Content -Path $mcpConfigPath -Raw -Encoding UTF8
-        $config = $content | ConvertFrom-Json
-        return ConvertTo-HashtableRecursive $config
-    }
-    catch {
-        Write-Warning "Failed to load project MCP config: $_"
-        return $null
-    }
+    return $config
 }
 
 <#

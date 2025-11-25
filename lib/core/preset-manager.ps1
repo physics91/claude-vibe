@@ -2,8 +2,27 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# Import utility modules
-. "$PSScriptRoot\..\utils\conversion-helpers.ps1"
+#region Module Dependencies
+# Required modules: conversion-helpers.ps1
+
+$script:ModuleDependencies = @(
+    @{ Name = 'conversion-helpers'; Path = "$PSScriptRoot\..\utils\conversion-helpers.ps1" },
+    @{ Name = 'constants'; Path = "$PSScriptRoot\constants.ps1" }
+)
+
+foreach ($dep in $script:ModuleDependencies) {
+    if (-not (Test-Path -LiteralPath $dep.Path)) {
+        throw "Required module not found: $($dep.Name) at $($dep.Path)"
+    }
+    try {
+        . $dep.Path
+    }
+    catch {
+        throw "Failed to load required module '$($dep.Name)': $($_.Exception.Message)"
+    }
+}
+
+#endregion
 
 <#
 .SYNOPSIS
@@ -21,7 +40,8 @@ $ErrorActionPreference = 'Stop'
 #region Configuration
 
 $script:BuiltinPresetsPath = Join-Path $PSScriptRoot "..\..\presets"
-$script:UserPresetsPath = Join-Path $env:USERPROFILE ".claude\claude-vibe\presets"
+# Use configurable path from constants (supports CLAUDE_VIBE_DATA_DIR env override)
+$script:UserPresetsPath = $script:USER_PRESETS_PATH
 $script:SchemaPath = Join-Path $PSScriptRoot "..\..\schemas\context-profile.schema.json"
 
 #endregion
@@ -53,22 +73,20 @@ function Get-BuiltinPresets {
     $presetFiles = Get-ChildItem -Path $script:BuiltinPresetsPath -Filter "*.json" -ErrorAction SilentlyContinue
 
     foreach ($file in $presetFiles) {
-        try {
-            $content = Get-Content -Path $file.FullName -Raw -Encoding UTF8
-            $preset = $content | ConvertFrom-Json
-
-            $presets += @{
-                name = $preset.name
-                displayName = $preset.displayName
-                description = $preset.description
-                estimatedTokenSaved = $preset.estimatedTokenSaved
-                isBuiltin = $true
-                filePath = $file.FullName
-                config = $preset
-            }
+        $preset = Read-JsonFile -Path $file.FullName
+        if ($null -eq $preset) {
+            Write-Warning "Failed to load preset file: $($file.Name)"
+            continue
         }
-        catch {
-            Write-Warning "Failed to load preset file: $($file.Name) - $_"
+
+        $presets += @{
+            name = $preset.name
+            displayName = $preset.displayName
+            description = $preset.description
+            estimatedTokenSaved = $preset.estimatedTokenSaved
+            isBuiltin = $true
+            filePath = $file.FullName
+            config = $preset
         }
     }
 
@@ -99,22 +117,20 @@ function Get-UserPresets {
     $presetFiles = Get-ChildItem -Path $script:UserPresetsPath -Filter "*.json" -ErrorAction SilentlyContinue
 
     foreach ($file in $presetFiles) {
-        try {
-            $content = Get-Content -Path $file.FullName -Raw -Encoding UTF8
-            $preset = $content | ConvertFrom-Json
-
-            $presets += @{
-                name = $preset.name
-                displayName = $preset.displayName
-                description = $preset.description
-                estimatedTokenSaved = $preset.estimatedTokenSaved
-                isBuiltin = $false
-                filePath = $file.FullName
-                config = $preset
-            }
+        $preset = Read-JsonFile -Path $file.FullName
+        if ($null -eq $preset) {
+            Write-Warning "Failed to load user preset file: $($file.Name)"
+            continue
         }
-        catch {
-            Write-Warning "Failed to load user preset file: $($file.Name) - $_"
+
+        $presets += @{
+            name = $preset.name
+            displayName = $preset.displayName
+            description = $preset.description
+            estimatedTokenSaved = $preset.estimatedTokenSaved
+            isBuiltin = $false
+            filePath = $file.FullName
+            config = $preset
         }
     }
 
@@ -445,19 +461,11 @@ function Get-ProjectProfile {
 
     $profilePath = Join-Path $ProjectRoot ".claude\context-profile.json"
 
-    if (-not (Test-Path $profilePath)) {
+    $profile = Read-JsonAsHashtable -Path $profilePath
+    if ($profile.Count -eq 0) {
         return $null
     }
-
-    try {
-        $content = Get-Content -Path $profilePath -Raw -Encoding UTF8
-        $profile = $content | ConvertFrom-Json
-        return ConvertTo-HashtableRecursive $profile
-    }
-    catch {
-        Write-Warning "Failed to load project profile: $_"
-        return $null
-    }
+    return $profile
 }
 
 #endregion

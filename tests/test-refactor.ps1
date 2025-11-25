@@ -147,6 +147,27 @@ Test-Case "Get-ConstantValue retrieves defined constants" {
     if ($result -ne 40) { throw "Should return actual constant value (40), got: $result" }
 }
 
+# Test 15: Read-JsonFile function exists
+Test-Case "Read-JsonFile function exists" {
+    $cmd = Get-Command Read-JsonFile -ErrorAction Stop
+    if (-not $cmd) { throw "Function not found" }
+}
+
+# Test 16: Read-JsonFile handles non-existent file
+Test-Case "Read-JsonFile returns null for non-existent file" {
+    $result = Read-JsonFile -Path "C:\nonexistent\file.json"
+    if ($null -ne $result) { throw "Should return null for non-existent file" }
+}
+
+# Test 17: Path constants are defined
+Test-Case "Path constants are defined" {
+    $pathConstants = @('CONTEXTS_PATH', 'USER_PRESETS_PATH', 'GLOBAL_MCP_CONFIG_PATH')
+    foreach ($const in $pathConstants) {
+        $val = Get-Variable -Name $const -ValueOnly -Scope Script -ErrorAction SilentlyContinue
+        if ($null -eq $val) { throw "Path constant $const not found" }
+    }
+}
+
 # Summary
 Write-Host ""
 Write-Host "=== Summary ===" -ForegroundColor Cyan

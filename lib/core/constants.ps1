@@ -98,6 +98,25 @@ Set-Variable -Name 'MAX_HOOK_TIMEOUT_MS' -Value 60000 -Option ReadOnly -Scope Sc
 
 #endregion
 
+#region Path Constants
+
+# Base directories (can be overridden by environment variables)
+# CLAUDE_VIBE_DATA_DIR overrides the default data directory
+$script:DefaultDataDir = Join-Path $env:USERPROFILE ".claude\claude-vibe"
+$script:DataDir = if ($env:CLAUDE_VIBE_DATA_DIR) { $env:CLAUDE_VIBE_DATA_DIR } else { $script:DefaultDataDir }
+
+# Claude configuration paths
+# CLAUDE_CONFIG_DIR overrides the default Claude config directory
+$script:DefaultClaudeConfigDir = Join-Path $env:USERPROFILE ".claude"
+$script:ClaudeConfigDir = if ($env:CLAUDE_CONFIG_DIR) { $env:CLAUDE_CONFIG_DIR } else { $script:DefaultClaudeConfigDir }
+
+# Derived paths
+Set-Variable -Name 'CONTEXTS_PATH' -Value (Join-Path $script:DataDir "contexts") -Option ReadOnly -Scope Script -ErrorAction SilentlyContinue
+Set-Variable -Name 'USER_PRESETS_PATH' -Value (Join-Path $script:DataDir "presets") -Option ReadOnly -Scope Script -ErrorAction SilentlyContinue
+Set-Variable -Name 'GLOBAL_MCP_CONFIG_PATH' -Value (Join-Path $script:ClaudeConfigDir "claude_code_config.json") -Option ReadOnly -Scope Script -ErrorAction SilentlyContinue
+
+#endregion
+
 #region Version Constants
 
 Set-Variable -Name 'PLUGIN_VERSION' -Value '0.3.0' -Option ReadOnly -Scope Script -ErrorAction SilentlyContinue
@@ -199,6 +218,9 @@ if ($MyInvocation.MyCommand.ScriptBlock.Module) {
         'DEFAULT_MAX_TOOL_HISTORY',
         'DEFAULT_HOOK_TIMEOUT_MS',
         'MAX_HOOK_TIMEOUT_MS',
+        'CONTEXTS_PATH',
+        'USER_PRESETS_PATH',
+        'GLOBAL_MCP_CONFIG_PATH',
         'PLUGIN_VERSION',
         'SCHEMA_VERSION'
     )

@@ -12,8 +12,26 @@
     Version: 1.0.0
 #>
 
-# Source security utilities for path validation
-. "$PSScriptRoot\..\utils\security.ps1"
+#region Module Dependencies
+# Required modules: security.ps1
+
+$script:ModuleDependencies = @(
+    @{ Name = 'security'; Path = "$PSScriptRoot\..\utils\security.ps1" }
+)
+
+foreach ($dep in $script:ModuleDependencies) {
+    if (-not (Test-Path -LiteralPath $dep.Path)) {
+        throw "Required module not found: $($dep.Name) at $($dep.Path)"
+    }
+    try {
+        . $dep.Path
+    }
+    catch {
+        throw "Failed to load required module '$($dep.Name)': $($_.Exception.Message)"
+    }
+}
+
+#endregion
 
 #region Get-AgentsMdHash
 

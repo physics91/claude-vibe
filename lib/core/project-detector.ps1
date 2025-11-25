@@ -15,8 +15,26 @@ $ErrorActionPreference = 'Stop'
     Version: 1.0.0
 #>
 
-# Import preset manager
-. "$PSScriptRoot\preset-manager.ps1"
+#region Module Dependencies
+# Required modules: preset-manager.ps1
+
+$script:ModuleDependencies = @(
+    @{ Name = 'preset-manager'; Path = "$PSScriptRoot\preset-manager.ps1" }
+)
+
+foreach ($dep in $script:ModuleDependencies) {
+    if (-not (Test-Path -LiteralPath $dep.Path)) {
+        throw "Required module not found: $($dep.Name) at $($dep.Path)"
+    }
+    try {
+        . $dep.Path
+    }
+    catch {
+        throw "Failed to load required module '$($dep.Name)': $($_.Exception.Message)"
+    }
+}
+
+#endregion
 
 #region Project Detection Functions
 
@@ -190,22 +208,16 @@ function Get-ProjectDependencies {
 
     # Check package.json (Node.js)
     $packageJsonPath = Join-Path $ProjectRoot "package.json"
-    if (Test-Path $packageJsonPath) {
-        try {
-            $packageJson = Get-Content -Path $packageJsonPath -Raw | ConvertFrom-Json
-
-            if ($packageJson.dependencies) {
-                $dependencies += $packageJson.dependencies.PSObject.Properties.Name
-            }
-            if ($packageJson.devDependencies) {
-                $dependencies += $packageJson.devDependencies.PSObject.Properties.Name
-            }
-            if ($packageJson.peerDependencies) {
-                $dependencies += $packageJson.peerDependencies.PSObject.Properties.Name
-            }
+    $packageJson = Read-JsonFile -Path $packageJsonPath
+    if ($null -ne $packageJson) {
+        if ($packageJson.PSObject.Properties.Name -contains 'dependencies' -and $packageJson.dependencies) {
+            $dependencies += $packageJson.dependencies.PSObject.Properties.Name
         }
-        catch {
-            Write-Verbose "Failed to parse package.json: $_"
+        if ($packageJson.PSObject.Properties.Name -contains 'devDependencies' -and $packageJson.devDependencies) {
+            $dependencies += $packageJson.devDependencies.PSObject.Properties.Name
+        }
+        if ($packageJson.PSObject.Properties.Name -contains 'peerDependencies' -and $packageJson.peerDependencies) {
+            $dependencies += $packageJson.peerDependencies.PSObject.Properties.Name
         }
     }
 

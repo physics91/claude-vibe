@@ -14,9 +14,28 @@
     Security: All writes are atomic, all content is filtered for sensitive data
 #>
 
-# Import utility modules
-. "$PSScriptRoot\..\utils\security.ps1"
-. "$PSScriptRoot\..\utils\conversion-helpers.ps1"
+#region Module Dependencies
+# Required modules: security.ps1, conversion-helpers.ps1
+
+$script:ModuleDependencies = @(
+    @{ Name = 'security'; Path = "$PSScriptRoot\..\utils\security.ps1" },
+    @{ Name = 'conversion-helpers'; Path = "$PSScriptRoot\..\utils\conversion-helpers.ps1" },
+    @{ Name = 'constants'; Path = "$PSScriptRoot\constants.ps1" }
+)
+
+foreach ($dep in $script:ModuleDependencies) {
+    if (-not (Test-Path -LiteralPath $dep.Path)) {
+        throw "Required module not found: $($dep.Name) at $($dep.Path)"
+    }
+    try {
+        . $dep.Path
+    }
+    catch {
+        throw "Failed to load required module '$($dep.Name)': $($_.Exception.Message)"
+    }
+}
+
+#endregion
 
 #region Custom Exceptions
 
@@ -1006,7 +1025,8 @@ function Get-DefaultStorageDir {
     [OutputType([string])]
     param()
 
-    return Join-Path $env:USERPROFILE ".claude\claude-vibe\contexts"
+    # Use configurable path from constants (supports CLAUDE_VIBE_DATA_DIR env override)
+    return $script:CONTEXTS_PATH
 }
 
 #endregion
