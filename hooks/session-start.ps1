@@ -436,7 +436,7 @@ function Get-ContextStoragePathFromConfig {
     )
 
     # Load configuration
-    $configPath = Join-Path $env:USERPROFILE ".claude\context-plugin\config.json"
+    $configPath = Join-Path $env:USERPROFILE ".claude\claude-vibe\config.json"
     $storageDir = Get-DefaultStorageDir
 
     if (Test-Path -LiteralPath $configPath -PathType Leaf) {

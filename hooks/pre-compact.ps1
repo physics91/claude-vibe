@@ -102,7 +102,7 @@ try {
 
     #region Load Configuration
 
-    $configPath = Join-Path $env:USERPROFILE ".claude\context-plugin\config.json"
+    $configPath = Join-Path $env:USERPROFILE ".claude\claude-vibe\config.json"
     $config = @{
         storage_dir = Get-DefaultStorageDir  # Use shared helper
         max_context_size_kb = 100

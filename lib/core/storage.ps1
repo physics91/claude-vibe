@@ -1061,7 +1061,7 @@ function Get-DefaultStorageDir {
     [OutputType([string])]
     param()
 
-    return Join-Path $env:USERPROFILE ".claude\context-plugin\contexts"
+    return Join-Path $env:USERPROFILE ".claude\claude-vibe\contexts"
 }
 
 #endregion
