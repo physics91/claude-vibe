@@ -2,6 +2,9 @@
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
+# Import utility modules
+. "$PSScriptRoot\..\utils\conversion-helpers.ps1"
+
 <#
 .SYNOPSIS
     Preset management module for Context Manager feature.
@@ -485,52 +488,6 @@ function Get-CoalescedValue {
 
 <#
 .SYNOPSIS
-    Converts a PSCustomObject to a Hashtable recursively.
-
-.DESCRIPTION
-    PowerShell 5.1 compatibility function for ConvertFrom-Json -AsHashtable.
-#>
-function ConvertTo-HashtableRecursive {
-    param(
-        [Parameter(ValueFromPipeline)]
-        $InputObject
-    )
-
-    process {
-        if ($null -eq $InputObject) {
-            return $null
-        }
-
-        if ($InputObject -is [System.Collections.IDictionary]) {
-            $hash = @{}
-            foreach ($key in $InputObject.Keys) {
-                $hash[$key] = ConvertTo-HashtableRecursive $InputObject[$key]
-            }
-            return $hash
-        }
-
-        if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string]) {
-            return @(
-                foreach ($item in $InputObject) {
-                    ConvertTo-HashtableRecursive $item
-                }
-            )
-        }
-
-        if ($InputObject -is [System.Management.Automation.PSCustomObject]) {
-            $hash = @{}
-            foreach ($property in $InputObject.PSObject.Properties) {
-                $hash[$property.Name] = ConvertTo-HashtableRecursive $property.Value
-            }
-            return $hash
-        }
-
-        return $InputObject
-    }
-}
-
-<#
-.SYNOPSIS
     Formats a preset list for display.
 
 .PARAMETER Presets
@@ -589,7 +546,6 @@ if ($MyInvocation.MyCommand.ScriptBlock.Module) {
         'Export-PresetAsProfile',
         'Get-ProjectProfile',
         'Format-PresetList',
-        'ConvertTo-HashtableRecursive',
         'Get-CoalescedValue'
     )
 }

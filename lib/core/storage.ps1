@@ -14,8 +14,9 @@
     Security: All writes are atomic, all content is filtered for sensitive data
 #>
 
-# Import security utilities
+# Import utility modules
 . "$PSScriptRoot\..\utils\security.ps1"
+. "$PSScriptRoot\..\utils\conversion-helpers.ps1"
 
 #region Custom Exceptions
 
@@ -40,62 +41,6 @@ class LockException : System.Exception {
     LockException([string]$message, [string]$resourcePath, [int]$timeoutMs) : base($message) {
         $this.ResourcePath = $resourcePath
         $this.TimeoutMs = $timeoutMs
-    }
-}
-
-#endregion
-
-#region Helper Functions
-
-<#
-.SYNOPSIS
-    Converts a PSCustomObject (from ConvertFrom-Json) to a Hashtable recursively.
-
-.DESCRIPTION
-    PowerShell 5.1 doesn't have ConvertFrom-Json -AsHashtable, so this function
-    provides the same functionality for compatibility.
-#>
-function ConvertTo-HashtableRecursive {
-    param(
-        [Parameter(ValueFromPipeline)]
-        $InputObject
-    )
-
-    process {
-        if ($null -eq $InputObject) {
-            return $null
-        }
-
-        # Handle IDictionary (including Hashtable) - must be before IEnumerable check
-        if ($InputObject -is [System.Collections.IDictionary]) {
-            $hash = @{}
-            foreach ($key in $InputObject.Keys) {
-                $hash[$key] = ConvertTo-HashtableRecursive $InputObject[$key]
-            }
-            return $hash
-        }
-
-        # Handle arrays and other enumerables (but not strings)
-        if ($InputObject -is [System.Collections.IEnumerable] -and $InputObject -isnot [string]) {
-            $collection = @(
-                foreach ($item in $InputObject) {
-                    ConvertTo-HashtableRecursive $item
-                }
-            )
-            return $collection
-        }
-
-        # Handle PSCustomObject (from ConvertFrom-Json)
-        if ($InputObject -is [System.Management.Automation.PSCustomObject]) {
-            $hash = @{}
-            foreach ($property in $InputObject.PSObject.Properties) {
-                $hash[$property.Name] = ConvertTo-HashtableRecursive $property.Value
-            }
-            return $hash
-        }
-
-        # Return primitive values as-is
-        return $InputObject
     }
 }
 
