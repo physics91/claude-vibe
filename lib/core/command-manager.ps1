@@ -54,6 +54,10 @@ $script:DefaultCommandTokens = 150
 # File size limit (DoS prevention) - 100KB max for command files
 $script:MaxCommandFileSizeBytes = 102400
 
+# Frontmatter and description limits
+$script:MaxFrontmatterLength = 5000
+$script:MaxDescriptionLength = 500
+
 # Valid command name pattern (alphanumeric, hyphen, underscore)
 $script:ValidCommandNamePattern = '^[a-zA-Z][a-zA-Z0-9_-]*$'
 
@@ -161,8 +165,8 @@ function Get-CommandInfo {
             $frontmatter = $Matches[1]
 
             # Validate frontmatter is not excessively long (prevent DoS)
-            if ($frontmatter.Length -gt 5000) {
-                Write-Warning "Frontmatter too long in '$fileName' (max 5000 chars)"
+            if ($frontmatter.Length -gt $script:MaxFrontmatterLength) {
+                Write-Warning "Frontmatter too long in '$fileName' (max $script:MaxFrontmatterLength chars)"
                 return $null
             }
 
@@ -171,8 +175,8 @@ function Get-CommandInfo {
                 $rawDescription = $Matches[1].Trim()
                 # Sanitize: remove potential injection characters
                 $description = $rawDescription -replace '[<>{}]', ''
-                if ($description.Length -gt 500) {
-                    $description = $description.Substring(0, 500) + "..."
+                if ($description.Length -gt $script:MaxDescriptionLength) {
+                    $description = $description.Substring(0, $script:MaxDescriptionLength) + "..."
                 }
             }
 

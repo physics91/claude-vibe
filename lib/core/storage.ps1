@@ -592,8 +592,8 @@ function Read-ContextState {
 
 .DESCRIPTION
     Creates a lock file containing the current process ID and timestamp.
-    Waits and retries if the resource is already locked. Automatically
-    cleans stale locks older than 60 seconds.
+    Waits and retries if the resource is already locked using exponential
+    backoff strategy. Automatically cleans stale locks older than 60 seconds.
 
 .PARAMETER ResourcePath
     The path of the resource to lock.
@@ -601,8 +601,17 @@ function Read-ContextState {
 .PARAMETER TimeoutMs
     Maximum time to wait for lock acquisition in milliseconds. Default is 5000.
 
-.PARAMETER RetryIntervalMs
-    Time between retry attempts in milliseconds. Default is 100.
+.PARAMETER InitialRetryMs
+    Initial retry interval in milliseconds. Default is 50.
+    Doubles after each retry up to MaxRetryMs.
+
+.PARAMETER MaxRetryMs
+    Maximum retry interval in milliseconds. Default is 1000.
+    Prevents exponential growth from exceeding this value.
+
+.PARAMETER UseJitter
+    If specified, adds random jitter (0-25%) to retry intervals
+    to prevent thundering herd problem in concurrent scenarios.
 
 .OUTPUTS
     System.String
@@ -616,9 +625,15 @@ function Read-ContextState {
         Remove-FileLock -LockPath $lockPath
     }
 
+.EXAMPLE
+    # With jitter for high-concurrency scenarios
+    $lockPath = New-FileLock -ResourcePath $path -UseJitter -InitialRetryMs 100 -MaxRetryMs 2000
+
 .NOTES
     Throws LockException if lock cannot be acquired within timeout.
     Stale locks (>60s) are automatically cleaned.
+
+    Exponential backoff sequence (default): 50ms, 100ms, 200ms, 400ms, 800ms, 1000ms (max)
 #>
 function New-FileLock {
     [CmdletBinding()]
@@ -632,8 +647,15 @@ function New-FileLock {
         [int]$TimeoutMs = 5000,
 
         [Parameter()]
-        [ValidateRange(10, 10000)]
-        [int]$RetryIntervalMs = 100
+        [ValidateRange(10, 5000)]
+        [int]$InitialRetryMs = 50,
+
+        [Parameter()]
+        [ValidateRange(100, 10000)]
+        [int]$MaxRetryMs = 1000,
+
+        [Parameter()]
+        [switch]$UseJitter
     )
 
     $normalizedPath = [System.IO.Path]::GetFullPath($ResourcePath)
@@ -644,6 +666,11 @@ function New-FileLock {
     $processId = $PID
     $hostname = $env:COMPUTERNAME
 
+    # Exponential backoff state
+    $currentRetryMs = $InitialRetryMs
+    $retryCount = 0
+    $random = if ($UseJitter) { [System.Random]::new() } else { $null }
+
     Write-Verbose "Acquiring lock for: $normalizedPath"
 
     while ($true) {
@@ -651,7 +678,7 @@ function New-FileLock {
         $elapsed = ([datetime]::UtcNow - $startTime).TotalMilliseconds
         if ($elapsed -ge $TimeoutMs) {
             throw [LockException]::new(
-                "Failed to acquire lock within $TimeoutMs ms",
+                "Failed to acquire lock within $TimeoutMs ms (retries: $retryCount)",
                 $ResourcePath,
                 $TimeoutMs
             )
@@ -671,9 +698,21 @@ function New-FileLock {
                     Write-Verbose "Removing stale lock (age: $([int]$lockAge)s, PID: $($lockInfo.pid))"
                     Remove-Item -LiteralPath $lockPath -Force -ErrorAction SilentlyContinue
                 } else {
-                    # Lock is still valid
-                    Write-Verbose "Resource locked by PID $($lockInfo.pid), waiting..."
-                    Start-Sleep -Milliseconds $RetryIntervalMs
+                    # Lock is still valid - wait with exponential backoff
+                    $retryCount++
+                    $sleepMs = $currentRetryMs
+
+                    # Add jitter (0-25% of current interval) to prevent thundering herd
+                    if ($UseJitter -and $random) {
+                        $jitter = $random.Next(0, [int]($currentRetryMs * 0.25))
+                        $sleepMs += $jitter
+                    }
+
+                    Write-Verbose "Resource locked by PID $($lockInfo.pid), retry #$retryCount (backoff: ${sleepMs}ms)"
+                    Start-Sleep -Milliseconds $sleepMs
+
+                    # Exponential backoff: double interval up to max
+                    $currentRetryMs = [Math]::Min($currentRetryMs * 2, $MaxRetryMs)
                     continue
                 }
             } catch {
@@ -708,13 +747,27 @@ function New-FileLock {
                 $fileStream.Close()
             }
 
-            Write-Verbose "Lock acquired: $lockPath"
+            if ($retryCount -gt 0) {
+                Write-Verbose "Lock acquired after $retryCount retries: $lockPath"
+            } else {
+                Write-Verbose "Lock acquired: $lockPath"
+            }
             return $lockPath
 
         } catch [System.IO.IOException] {
-            # File already exists (race condition) - retry
-            Write-Verbose "Lock creation race, retrying..."
-            Start-Sleep -Milliseconds $RetryIntervalMs
+            # File already exists (race condition) - retry with backoff
+            $retryCount++
+            $sleepMs = $currentRetryMs
+
+            if ($UseJitter -and $random) {
+                $jitter = $random.Next(0, [int]($currentRetryMs * 0.25))
+                $sleepMs += $jitter
+            }
+
+            Write-Verbose "Lock creation race, retry #$retryCount (backoff: ${sleepMs}ms)"
+            Start-Sleep -Milliseconds $sleepMs
+
+            $currentRetryMs = [Math]::Min($currentRetryMs * 2, $MaxRetryMs)
             continue
         } catch {
             throw [LockException]::new(

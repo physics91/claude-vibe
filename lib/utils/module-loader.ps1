@@ -74,16 +74,19 @@ $script:ModuleDependencies = @{
     'constants'          = @()
     'security'           = @()
     'safe-access'        = @()
+    'exceptions'         = @()
+    'validation'         = @('exceptions')
 
     # Core modules with dependencies
-    'storage'            = @('security', 'conversion-helpers')
-    'preset-manager'     = @('conversion-helpers')
-    'parser'             = @('security')
-    'command-manager'    = @('conversion-helpers', 'constants')
-    'mcp-config-generator' = @('preset-manager')
+    'storage'            = @('security', 'conversion-helpers', 'exceptions')
+    'preset-manager'     = @('conversion-helpers', 'exceptions')
+    'parser'             = @('security', 'exceptions')
+    'command-manager'    = @('conversion-helpers', 'constants', 'exceptions')
+    'mcp-config-generator' = @('preset-manager', 'exceptions')
     'project-detector'   = @('preset-manager')
     'prompt-analyzer'    = @()
     'clarification-generator' = @()
+    'schema-validator'        = @('conversion-helpers', 'safe-access')
 }
 
 # Track loaded modules

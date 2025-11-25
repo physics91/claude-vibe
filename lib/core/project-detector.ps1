@@ -36,6 +36,198 @@ foreach ($dep in $script:ModuleDependencies) {
 
 #endregion
 
+#region Detection Scoring Constants
+
+# Score weights for detection confidence calculation
+$script:FileDetectionScore = 10       # Score per matched file
+$script:DependencyDetectionScore = 15 # Score per matched dependency
+$script:PatternDetectionScore = 5     # Score per matched pattern
+
+#endregion
+
+#region Detection Cache
+
+# Cache for project detection results (performance optimization)
+$script:DetectionCache = @{}
+
+# Cache TTL in seconds (5 minutes default)
+$script:DetectionCacheTtlSeconds = 300
+
+# Maximum cache entries (prevent memory bloat)
+$script:MaxCacheEntries = 100
+
+<#
+.SYNOPSIS
+    Gets a cache key for a project root.
+
+.PARAMETER ProjectRoot
+    The project root path.
+
+.OUTPUTS
+    Normalized cache key string.
+#>
+function Get-DetectionCacheKey {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ProjectRoot
+    )
+
+    try {
+        # Normalize path for consistent cache keys
+        $resolved = (Resolve-Path -LiteralPath $ProjectRoot -ErrorAction Stop).Path
+        return $resolved.ToLowerInvariant().TrimEnd('\', '/')
+    }
+    catch {
+        return $ProjectRoot.ToLowerInvariant().TrimEnd('\', '/')
+    }
+}
+
+<#
+.SYNOPSIS
+    Gets a cached detection result if available and not expired.
+
+.PARAMETER ProjectRoot
+    The project root path.
+
+.OUTPUTS
+    Cached result or $null if not found/expired.
+#>
+function Get-CachedDetection {
+    [CmdletBinding()]
+    [OutputType([hashtable])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ProjectRoot
+    )
+
+    $key = Get-DetectionCacheKey -ProjectRoot $ProjectRoot
+
+    if (-not $script:DetectionCache.ContainsKey($key)) {
+        return $null
+    }
+
+    $entry = $script:DetectionCache[$key]
+    $age = (Get-Date) - $entry.timestamp
+
+    if ($age.TotalSeconds -gt $script:DetectionCacheTtlSeconds) {
+        # Expired - remove from cache
+        $script:DetectionCache.Remove($key)
+        Write-Verbose "Cache expired for: $ProjectRoot"
+        return $null
+    }
+
+    Write-Verbose "Cache hit for: $ProjectRoot (age: $([int]$age.TotalSeconds)s)"
+    return $entry.result
+}
+
+<#
+.SYNOPSIS
+    Stores a detection result in the cache.
+
+.PARAMETER ProjectRoot
+    The project root path.
+
+.PARAMETER Result
+    The detection result to cache.
+#>
+function Set-CachedDetection {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ProjectRoot,
+
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Result
+    )
+
+    $key = Get-DetectionCacheKey -ProjectRoot $ProjectRoot
+
+    # Enforce max cache size (LRU-like: remove oldest entries)
+    if ($script:DetectionCache.Count -ge $script:MaxCacheEntries) {
+        $oldest = $script:DetectionCache.GetEnumerator() |
+            Sort-Object { $_.Value.timestamp } |
+            Select-Object -First 1
+        if ($oldest) {
+            $script:DetectionCache.Remove($oldest.Key)
+            Write-Verbose "Cache evicted oldest entry"
+        }
+    }
+
+    $script:DetectionCache[$key] = @{
+        result = $Result
+        timestamp = Get-Date
+    }
+    Write-Verbose "Cached detection for: $ProjectRoot"
+}
+
+<#
+.SYNOPSIS
+    Clears the detection cache.
+
+.PARAMETER ProjectRoot
+    Optional. Clear only cache for specific project root.
+    If not specified, clears entire cache.
+#>
+function Clear-DetectionCache {
+    [CmdletBinding()]
+    param(
+        [Parameter()]
+        [string]$ProjectRoot
+    )
+
+    if ($ProjectRoot) {
+        $key = Get-DetectionCacheKey -ProjectRoot $ProjectRoot
+        if ($script:DetectionCache.ContainsKey($key)) {
+            $script:DetectionCache.Remove($key)
+            Write-Verbose "Cleared cache for: $ProjectRoot"
+        }
+    }
+    else {
+        $count = $script:DetectionCache.Count
+        $script:DetectionCache.Clear()
+        Write-Verbose "Cleared entire cache ($count entries)"
+    }
+}
+
+<#
+.SYNOPSIS
+    Gets cache statistics.
+
+.OUTPUTS
+    Hashtable with cache statistics.
+#>
+function Get-DetectionCacheStats {
+    [CmdletBinding()]
+    [OutputType([hashtable])]
+    param()
+
+    $now = Get-Date
+    $validCount = 0
+    $expiredCount = 0
+
+    foreach ($entry in $script:DetectionCache.Values) {
+        $age = $now - $entry.timestamp
+        if ($age.TotalSeconds -le $script:DetectionCacheTtlSeconds) {
+            $validCount++
+        }
+        else {
+            $expiredCount++
+        }
+    }
+
+    return @{
+        totalEntries = $script:DetectionCache.Count
+        validEntries = $validCount
+        expiredEntries = $expiredCount
+        maxEntries = $script:MaxCacheEntries
+        ttlSeconds = $script:DetectionCacheTtlSeconds
+    }
+}
+
+#endregion
+
 #region Project Detection Functions
 
 <#
@@ -45,6 +237,9 @@ foreach ($dep in $script:ModuleDependencies) {
 .PARAMETER ProjectRoot
     The root directory of the project to analyze.
 
+.PARAMETER SkipCache
+    If specified, bypasses the cache and performs fresh detection.
+
 .OUTPUTS
     Hashtable with detected type, confidence, and recommended preset.
 #>
@@ -53,7 +248,10 @@ function Detect-ProjectType {
     [OutputType([hashtable])]
     param(
         [Parameter(Mandatory = $true)]
-        [string]$ProjectRoot
+        [string]$ProjectRoot,
+
+        [Parameter()]
+        [switch]$SkipCache
     )
 
     if (-not (Test-Path $ProjectRoot)) {
@@ -64,6 +262,14 @@ function Detect-ProjectType {
             details = @{
                 error = "Project root not found"
             }
+        }
+    }
+
+    # Check cache first (unless SkipCache is specified)
+    if (-not $SkipCache) {
+        $cachedResult = Get-CachedDetection -ProjectRoot $ProjectRoot
+        if ($null -ne $cachedResult) {
+            return $cachedResult
         }
     }
 
@@ -94,19 +300,19 @@ function Detect-ProjectType {
 
         # Check files
         if ($config.detection.files) {
-            $maxScore += $config.detection.files.Count * 10
+            $maxScore += $config.detection.files.Count * $script:FileDetectionScore
             foreach ($file in $config.detection.files) {
                 $filePath = Join-Path $ProjectRoot $file
                 # Support glob patterns
                 if ($file -match '\*') {
                     $foundFiles = Get-ChildItem -Path $ProjectRoot -Filter $file -ErrorAction SilentlyContinue
                     if ($foundFiles) {
-                        $score += 10
+                        $score += $script:FileDetectionScore
                         $matches.files += $file
                     }
                 }
                 elseif (Test-Path $filePath) {
-                    $score += 10
+                    $score += $script:FileDetectionScore
                     $matches.files += $file
                 }
             }
@@ -114,12 +320,12 @@ function Detect-ProjectType {
 
         # Check dependencies
         if ($config.detection.dependencies) {
-            $maxScore += $config.detection.dependencies.Count * 15
+            $maxScore += $config.detection.dependencies.Count * $script:DependencyDetectionScore
             $projectDeps = Get-ProjectDependencies -ProjectRoot $ProjectRoot
 
             foreach ($dep in $config.detection.dependencies) {
                 if ($projectDeps -contains $dep) {
-                    $score += 15
+                    $score += $script:DependencyDetectionScore
                     $matches.dependencies += $dep
                 }
             }
@@ -127,12 +333,12 @@ function Detect-ProjectType {
 
         # Check directory patterns
         if ($config.detection.patterns) {
-            $maxScore += $config.detection.patterns.Count * 5
+            $maxScore += $config.detection.patterns.Count * $script:PatternDetectionScore
             foreach ($pattern in $config.detection.patterns) {
                 $patternPath = Join-Path $ProjectRoot $pattern
                 $basePath = $patternPath -replace '\*\*.*$', ''
                 if (Test-Path $basePath) {
-                    $score += 5
+                    $score += $script:PatternDetectionScore
                     $matches.patterns += $pattern
                 }
             }
@@ -162,9 +368,10 @@ function Detect-ProjectType {
         }
     }
 
-    # Return result
+    # Build and cache result
+    $result = $null
     if ($bestPreset -and $bestConfidence -ge 0.3) {
-        return @{
+        $result = @{
             detectedType = $bestPreset
             confidence = $bestConfidence
             recommendedPreset = $bestPreset
@@ -174,16 +381,21 @@ function Detect-ProjectType {
             }
         }
     }
-
-    return @{
-        detectedType = "unknown"
-        confidence = 0
-        recommendedPreset = "minimal"
-        details = @{
-            scores = $scores
-            message = "No strong match found"
+    else {
+        $result = @{
+            detectedType = "unknown"
+            confidence = 0
+            recommendedPreset = "minimal"
+            details = @{
+                scores = $scores
+                message = "No strong match found"
+            }
         }
     }
+
+    # Cache the result for future calls
+    Set-CachedDetection -ProjectRoot $ProjectRoot -Result $result
+    return $result
 }
 
 <#
@@ -412,6 +624,8 @@ if ($MyInvocation.MyCommand.ScriptBlock.Module) {
     Export-ModuleMember -Function @(
         'Detect-ProjectType',
         'Get-ProjectDependencies',
-        'Format-DetectionResult'
+        'Format-DetectionResult',
+        'Clear-DetectionCache',
+        'Get-DetectionCacheStats'
     )
 }
