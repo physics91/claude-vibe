@@ -233,6 +233,82 @@ function Read-JsonFile {
 
 #endregion
 
+#region New-DirectorySafe
+
+<#
+.SYNOPSIS
+    Creates a directory if it doesn't exist, with proper error handling.
+
+.DESCRIPTION
+    Standardized directory creation function that handles existing directories,
+    validates paths, and provides consistent error handling across all modules.
+
+.PARAMETER Path
+    The path of the directory to create.
+
+.PARAMETER PassThru
+    If specified, returns the DirectoryInfo object for the created/existing directory.
+
+.OUTPUTS
+    System.IO.DirectoryInfo if PassThru is specified, $null otherwise.
+
+.EXAMPLE
+    New-DirectorySafe -Path "C:\projects\myapp\.claude"
+
+.EXAMPLE
+    $dir = New-DirectorySafe -Path $targetPath -PassThru
+#>
+function New-DirectorySafe {
+    [CmdletBinding()]
+    [OutputType([System.IO.DirectoryInfo])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
+        [string]$Path,
+
+        [Parameter()]
+        [switch]$PassThru
+    )
+
+    # Validate path doesn't contain invalid characters
+    $invalidChars = [System.IO.Path]::GetInvalidPathChars()
+    foreach ($char in $invalidChars) {
+        if ($Path.Contains($char)) {
+            throw "Path contains invalid character: $char"
+        }
+    }
+
+    try {
+        # Check if directory already exists
+        if (Test-Path -LiteralPath $Path -PathType Container) {
+            Write-Verbose "Directory already exists: $Path"
+            if ($PassThru) {
+                return Get-Item -LiteralPath $Path
+            }
+            return $null
+        }
+
+        # Check if path exists as a file (conflict)
+        if (Test-Path -LiteralPath $Path -PathType Leaf) {
+            throw "A file already exists at the specified path: $Path"
+        }
+
+        # Create directory
+        $newDir = New-Item -Path $Path -ItemType Directory -Force -ErrorAction Stop
+        Write-Verbose "Created directory: $Path"
+
+        if ($PassThru) {
+            return $newDir
+        }
+        return $null
+    }
+    catch {
+        throw "Failed to create directory '$Path': $($_.Exception.Message)"
+    }
+}
+
+#endregion
+
 #region Module Export
 
 # Export functions (only when loaded as module)
@@ -240,7 +316,8 @@ if ($MyInvocation.MyCommand.ScriptBlock.Module) {
     Export-ModuleMember -Function @(
         'ConvertTo-HashtableRecursive',
         'Read-JsonAsHashtable',
-        'Read-JsonFile'
+        'Read-JsonFile',
+        'New-DirectorySafe'
     )
 }
 

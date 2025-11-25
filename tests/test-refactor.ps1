@@ -199,6 +199,88 @@ Test-Case "MaxCommandFileSizeBytes constant defined" {
     if ($val.Value -le 0) { throw "MaxCommandFileSizeBytes should be positive" }
 }
 
+# Load prompt-analyzer for tests
+. "$PSScriptRoot\..\lib\core\prompt-analyzer.ps1"
+
+# Test 22: Test-PromptAmbiguity function exists
+Test-Case "Test-PromptAmbiguity function exists" {
+    $cmd = Get-Command Test-PromptAmbiguity -ErrorAction Stop
+    if (-not $cmd) { throw "Function not found" }
+}
+
+# Test 23: Test-PromptAmbiguity detects short prompts
+Test-Case "Test-PromptAmbiguity detects short prompts" {
+    $result = Test-PromptAmbiguity -Prompt "fix it"
+    if (-not $result.IsAmbiguous) { throw "Should be ambiguous" }
+    if ($result.Reasons -notcontains "TOO_SHORT") { throw "Should detect TOO_SHORT" }
+}
+
+# Test 24: Test-PromptAmbiguity passes good prompts
+Test-Case "Test-PromptAmbiguity passes detailed prompts" {
+    $result = Test-PromptAmbiguity -Prompt "Please add a new function to src/utils/helpers.ts that validates email addresses using regex pattern"
+    if ($result.IsAmbiguous) { throw "Should not be ambiguous for detailed prompt" }
+}
+
+# Load clarification-generator for tests
+. "$PSScriptRoot\..\lib\core\clarification-generator.ps1"
+
+# Test 25: New-ClarificationPrompt function exists
+Test-Case "New-ClarificationPrompt function exists" {
+    $cmd = Get-Command New-ClarificationPrompt -ErrorAction Stop
+    if (-not $cmd) { throw "Function not found" }
+}
+
+# Load safe-access for tests
+. "$PSScriptRoot\..\lib\utils\safe-access.ps1"
+
+# Test 26: Test-PropertyExists function exists
+Test-Case "Test-PropertyExists function exists" {
+    $cmd = Get-Command Test-PropertyExists -ErrorAction Stop
+    if (-not $cmd) { throw "Function not found" }
+}
+
+# Test 27: Test-PropertyExists works with PSCustomObject
+Test-Case "Test-PropertyExists works with PSCustomObject" {
+    $obj = [PSCustomObject]@{ name = "test"; value = 123 }
+    if (-not (Test-PropertyExists -Object $obj -PropertyName 'name')) { throw "Should find 'name'" }
+    if (Test-PropertyExists -Object $obj -PropertyName 'missing') { throw "Should not find 'missing'" }
+}
+
+# Test 28: Get-SafeProperty returns value or default
+Test-Case "Get-SafeProperty returns value or default" {
+    $obj = @{ name = "test" }
+    $result = Get-SafeProperty -Object $obj -PropertyName 'name' -Default 'fallback'
+    if ($result -ne 'test') { throw "Should return 'test'" }
+    $result = Get-SafeProperty -Object $obj -PropertyName 'missing' -Default 'fallback'
+    if ($result -ne 'fallback') { throw "Should return 'fallback'" }
+}
+
+# Test 29: Get-NestedProperty navigates paths
+Test-Case "Get-NestedProperty navigates paths" {
+    $obj = @{ config = @{ server = @{ port = 8080 } } }
+    $result = Get-NestedProperty -Object $obj -Path 'config.server.port' -Default 0
+    if ($result -ne 8080) { throw "Should return 8080, got: $result" }
+}
+
+# Test 30: New-DirectorySafe function exists
+Test-Case "New-DirectorySafe function exists" {
+    $cmd = Get-Command New-DirectorySafe -ErrorAction Stop
+    if (-not $cmd) { throw "Function not found" }
+}
+
+# Test 31: New-DirectorySafe creates directory
+Test-Case "New-DirectorySafe creates and returns directory" {
+    $testDir = Join-Path $env:TEMP "claude-vibe-test-$(Get-Random)"
+    try {
+        $result = New-DirectorySafe -Path $testDir -PassThru
+        if (-not (Test-Path $testDir)) { throw "Directory not created" }
+        if ($null -eq $result) { throw "Should return directory info with PassThru" }
+    }
+    finally {
+        if (Test-Path $testDir) { Remove-Item $testDir -Force }
+    }
+}
+
 # Summary
 Write-Host ""
 Write-Host "=== Summary ===" -ForegroundColor Cyan

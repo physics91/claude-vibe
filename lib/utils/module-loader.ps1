@@ -73,6 +73,7 @@ $script:ModuleDependencies = @{
     'conversion-helpers' = @()
     'constants'          = @()
     'security'           = @()
+    'safe-access'        = @()
 
     # Core modules with dependencies
     'storage'            = @('security', 'conversion-helpers')

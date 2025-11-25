@@ -44,15 +44,21 @@
 
 ## 대기 중인 작업
 
-### Phase 3 - MEDIUM 우선순위 (코드 품질)
+### Phase 3 - MEDIUM 우선순위 (코드 품질) - 진행 중
 
-| # | 작업 | 파일 | 상태 | 예상 시간 |
-|---|------|------|------|----------|
-| 5 | Prompt Analyzer 리팩토링 | prompt-analyzer.ps1 | ⬜ 대기 | 1h |
-| 6 | Safe Access 유틸리티 추출 | 신규 safe-access.ps1 | ⬜ 대기 | 1h |
-| 7 | 미테스트 모듈 유닛테스트 작성 | preset-manager 등 4개 | ⬜ 대기 | 6-8h |
-| 8 | 에러 핸들링 표준화 | 모든 모듈 | ⬜ 대기 | 2-3h |
-| 9 | 디렉토리 생성 패턴 통일 | command-manager, mcp-config | ⬜ 대기 | 1h |
+| # | 작업 | 파일 | 상태 |
+|---|------|------|------|
+| 5 | Prompt Analyzer 리팩토링 | prompt-analyzer.ps1, clarification-generator.ps1 | ✅ 완료 |
+| 6 | Safe Access 유틸리티 추출 | 신규 safe-access.ps1 | ✅ 완료 |
+| 7 | 미테스트 모듈 유닛테스트 작성 | preset-manager 등 4개 | ⬜ 대기 |
+| 8 | 에러 핸들링 표준화 | 모든 모듈 | ⬜ 대기 |
+| 9 | 디렉토리 생성 패턴 통일 | conversion-helpers.ps1 | ✅ 완료 |
+
+**Phase 3 완료된 변경사항:**
+- prompt-analyzer.ps1: 헤더 추가, 매직넘버 상수화, 헬퍼 함수 분리
+- clarification-generator.ps1: 동일한 패턴 적용
+- safe-access.ps1 신규 생성: `Test-PropertyExists`, `Get-SafeProperty`, `Get-NestedProperty`
+- conversion-helpers.ps1: `New-DirectorySafe` 디렉토리 생성 유틸리티 추가
 
 ### Phase 4 - LOW 우선순위 (개선)
 
@@ -70,15 +76,21 @@
 
 | 지표 | 값 | 목표 |
 |------|-----|------|
-| 테스트 수 | 21개 ✅ | 30개+ |
-| 테스트 커버리지 | ~65% | 80%+ |
-| 미테스트 코드 | ~1,600줄 | 0줄 |
+| 테스트 수 | 31개 ✅ | 40개+ |
+| 테스트 커버리지 | ~70% | 80%+ |
+| 미테스트 코드 | ~1,400줄 | 0줄 |
 | HIGH 이슈 | 0개 ✅ | 0개 |
-| MEDIUM 이슈 | 5개 | 0개 |
+| MEDIUM 이슈 | 2개 | 0개 |
 
 ---
 
 ## 변경 이력
+
+### 2025-01-25 (3차)
+- Phase 3 진행: prompt-analyzer.ps1, clarification-generator.ps1 리팩토링
+- safe-access.ps1 신규 생성 (Safe Access 유틸리티)
+- New-DirectorySafe 함수 추가 (디렉토리 생성 패턴 통일)
+- 31개 테스트 통과
 
 ### 2025-01-25 (2차)
 - AI 코드 리뷰 완료 (Codex + Gemini 3라운드 토론)
