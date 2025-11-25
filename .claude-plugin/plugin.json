@@ -23,7 +23,6 @@
     "mcp",
     "token-optimization"
   ],
-  "hooks": "./hooks/hooks.json",
   "skills": "./skills",
   "commands": "./commands"
 }
