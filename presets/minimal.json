@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "name": "minimal",
+  "displayName": "Minimal",
+  "description": "핵심 도구만 사용. 최대 토큰 절약을 위한 프리셋",
+  "mcp": {
+    "enabled": [],
+    "disabled": ["*"]
+  },
+  "agents": {
+    "enabled": [],
+    "disabled": ["*"]
+  },
+  "commands": {
+    "enabled": ["context-setup", "context-status"],
+    "disabled": []
+  },
+  "estimatedTokenSaved": 45000
+}

@@ -1,0 +1,68 @@
+{
+  "version": "1.0.0",
+  "name": "web-dev",
+  "displayName": "Web Development",
+  "description": "React, Vue, Next.js 등 웹 프론트엔드 개발용 프리셋",
+  "detection": {
+    "files": [
+      "package.json",
+      "tsconfig.json",
+      "next.config.js",
+      "next.config.mjs",
+      "vite.config.js",
+      "vite.config.ts",
+      "webpack.config.js",
+      "angular.json",
+      "nuxt.config.js",
+      "nuxt.config.ts"
+    ],
+    "dependencies": [
+      "react",
+      "react-dom",
+      "vue",
+      "next",
+      "nuxt",
+      "angular",
+      "@angular/core",
+      "svelte",
+      "vite",
+      "webpack"
+    ],
+    "patterns": [
+      "src/pages/**",
+      "src/components/**",
+      "app/**/*.tsx",
+      "pages/**/*.tsx"
+    ]
+  },
+  "mcp": {
+    "enabled": ["github", "playwright", "brave-search"],
+    "disabled": ["filesystem", "openrouter", "database", "kubernetes"]
+  },
+  "agents": {
+    "enabled": [
+      "react-expert",
+      "vue-expert",
+      "angular-expert",
+      "css-expert",
+      "nodejs-expert",
+      "frontend-optimizer",
+      "ui-ux-designer",
+      "accessibility-expert"
+    ],
+    "disabled": [
+      "ios-expert",
+      "android-expert",
+      "flutter-expert",
+      "ml-engineer",
+      "deep-learning-expert",
+      "data-analyst",
+      "bigdata-engineer"
+    ]
+  },
+  "commands": {
+    "enabled": ["*"],
+    "disabled": []
+  },
+  "estimatedTokenSaved": 28000
+}

@@ -1,3 +1,6 @@
+# Project-level config (generated per project)
+.claude/
+
 # Test outputs
 test-output.txt
 test-results.xml

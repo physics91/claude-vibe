@@ -38,6 +38,9 @@ try {
     . "$libPath\core\parser.ps1"
     . "$libPath\core\storage.ps1"
     . "$libPath\utils\security.ps1"
+    . "$libPath\core\preset-manager.ps1"
+    . "$libPath\core\project-detector.ps1"
+    . "$libPath\core\mcp-config-generator.ps1"
 } catch {
     # Graceful degradation - output empty string on module load failure
     Write-Output ""
@@ -514,6 +517,176 @@ function Test-ShouldLoadContext {
 
 #endregion
 
+#region Context Profile Functions
+
+<#
+.SYNOPSIS
+    Formats the active context profile as markdown.
+
+.PARAMETER Profile
+    The context profile hashtable.
+
+.PARAMETER ProjectRoot
+    The project root directory.
+
+.OUTPUTS
+    System.String
+    Formatted markdown for the active profile.
+#>
+function Format-ContextProfileStatus {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Profile,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ProjectRoot
+    )
+
+    $result = [System.Text.StringBuilder]::new()
+
+    [void]$result.AppendLine("")
+    [void]$result.AppendLine("## Active Context Profile")
+    [void]$result.AppendLine("")
+
+    $profileName = Get-SafeHashValue -Hash $Profile -Keys @('displayName') -Default ""
+    if (-not $profileName) {
+        $profileName = Get-SafeHashValue -Hash $Profile -Keys @('name') -Default "custom"
+    }
+
+    [void]$result.AppendLine("**Profile**: $profileName")
+    [void]$result.AppendLine("**Project**: $ProjectRoot")
+
+    # MCP servers
+    $mcpEnabled = Get-SafeHashValue -Hash $Profile -Keys @('mcp', 'enabled') -Default @()
+    if ($mcpEnabled -and $mcpEnabled.Count -gt 0 -and $mcpEnabled[0] -ne "*") {
+        [void]$result.AppendLine("**MCP Servers**: $($mcpEnabled -join ', ')")
+    }
+
+    # Agents
+    $agentsEnabled = Get-SafeHashValue -Hash $Profile -Keys @('agents', 'enabled') -Default @()
+    if ($agentsEnabled -and $agentsEnabled.Count -gt 0 -and $agentsEnabled[0] -ne "*") {
+        $agentCount = $agentsEnabled.Count
+        [void]$result.AppendLine("**Agents**: $agentCount enabled")
+    }
+
+    # Token savings
+    $tokenSaved = Get-SafeHashValue -Hash $Profile -Keys @('estimatedTokenSaved') -Default 0
+    if ($tokenSaved -gt 0) {
+        [void]$result.AppendLine("**Estimated Token Savings**: ~$tokenSaved tokens")
+    }
+
+    [void]$result.AppendLine("")
+    [void]$result.AppendLine("To modify: ``/context-setup``")
+
+    return $result.ToString()
+}
+
+<#
+.SYNOPSIS
+    Formats a context optimization suggestion when no profile exists.
+
+.PARAMETER Detection
+    The project detection result.
+
+.PARAMETER ProjectRoot
+    The project root directory.
+
+.OUTPUTS
+    System.String
+    Formatted markdown suggestion.
+#>
+function Format-ContextOptimizationSuggestion {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Detection,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ProjectRoot
+    )
+
+    # Only suggest if confidence is high enough
+    if ($Detection.confidence -lt 0.3) {
+        return ""
+    }
+
+    $result = [System.Text.StringBuilder]::new()
+
+    [void]$result.AppendLine("")
+    [void]$result.AppendLine("## Context Optimization Available")
+    [void]$result.AppendLine("")
+
+    $detectedType = $Detection.detectedType
+    $preset = Get-PresetByName -Name $Detection.recommendedPreset
+
+    $displayName = if ($preset) {
+        Get-SafeHashValue -Hash $preset -Keys @('displayName') -Default $detectedType
+    } else {
+        $detectedType
+    }
+
+    $confidence = [math]::Round($Detection.confidence * 100)
+
+    [void]$result.AppendLine("**Detected Project Type**: $displayName ($confidence% confidence)")
+    [void]$result.AppendLine("**Recommended Preset**: $($Detection.recommendedPreset)")
+
+    if ($preset -and $preset.estimatedTokenSaved) {
+        [void]$result.AppendLine("**Estimated Token Savings**: ~$($preset.estimatedTokenSaved) tokens")
+    }
+
+    [void]$result.AppendLine("")
+    [void]$result.AppendLine("Run ``/context-setup`` to optimize your context window.")
+
+    return $result.ToString()
+}
+
+<#
+.SYNOPSIS
+    Gets context profile information for a project.
+
+.PARAMETER ProjectRoot
+    The project root directory.
+
+.OUTPUTS
+    System.String
+    Formatted markdown or empty string.
+#>
+function Get-ContextProfileInfo {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ProjectRoot
+    )
+
+    try {
+        # Check for existing profile
+        $profile = Get-ProjectProfile -ProjectRoot $ProjectRoot
+
+        if ($profile) {
+            return Format-ContextProfileStatus -Profile $profile -ProjectRoot $ProjectRoot
+        }
+
+        # No profile - try to detect and suggest
+        $detection = Detect-ProjectType -ProjectRoot $ProjectRoot
+
+        if ($detection -and $detection.detectedType -ne "unknown") {
+            return Format-ContextOptimizationSuggestion -Detection $detection -ProjectRoot $ProjectRoot
+        }
+
+        return ""
+    }
+    catch {
+        # Graceful degradation
+        return ""
+    }
+}
+
+#endregion
+
 #region Main Execution
 
 try {
@@ -548,12 +721,21 @@ try {
         exit 0
     }
 
+    # Get project root from hook input
+    $projectRoot = Get-SafeHashValue -Hash $hookInput -Keys @('cwd') -Default (Get-Location).Path
+
     # Check if we should load context
     $shouldLoad = Test-ShouldLoadContext -HookInput $hookInput
 
     if (-not $shouldLoad) {
-        # Not a compaction session - return empty string
-        Write-Output ""
+        # Not a compaction session - but still check for context profile
+        $profileInfo = Get-ContextProfileInfo -ProjectRoot $projectRoot
+
+        if ($profileInfo) {
+            Write-Output $profileInfo
+        } else {
+            Write-Output ""
+        }
         exit 0
     }
 
@@ -576,6 +758,14 @@ try {
 
     # Format context as markdown
     $markdown = Format-ContextAsMarkdown -Context $context -SessionId $hookInput.session_id
+
+    # Add context profile status if available
+    $projectRoot = Get-SafeHashValue -Hash $hookInput -Keys @('cwd') -Default (Get-Location).Path
+    $profileInfo = Get-ContextProfileInfo -ProjectRoot $projectRoot
+
+    if ($profileInfo) {
+        $markdown = $markdown + $profileInfo
+    }
 
     # Output markdown to stdout
     Write-Output $markdown

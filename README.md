@@ -1,283 +1,95 @@
 # Claude Vibe
 
-A comprehensive Claude Code plugin that enhances your AI-assisted development workflow with intelligent context management and prompt optimization for vibe coding.
+Claude Code plugin for intelligent context management and prompt optimization.
 
 [한국어 문서](./README.ko.md)
 
 ## Installation
 
-### Method 1: Plugin Command (Recommended)
-
 ```bash
-# Add marketplace
+# Add marketplace & install
 /plugin marketplace add physics91/claude-vibe
-
-# Install plugin
 /plugin install claude-vibe@physics91
-```
-
-### Method 2: Manual Installation
-
-```powershell
-# 1. Clone repository
-git clone https://github.com/physics91/claude-vibe.git
-cd claude-vibe
-
-# 2. Register hooks in settings.json
-```
-
-```json
-{
-  "hooks": {
-    "PreCompact": [
-      {
-        "matcher": "",
-        "hooks": ["powershell -ExecutionPolicy Bypass -File \"path/to/hooks/pre-compact.ps1\""]
-      }
-    ],
-    "SessionStart": [
-      {
-        "matcher": "compact",
-        "hooks": ["powershell -ExecutionPolicy Bypass -File \"path/to/hooks/session-start.ps1\""]
-      }
-    ]
-  }
-}
-```
-
-## Updating
-
-### Update to Latest Version
-
-**Method 1: Reinstall via Plugin Command (Recommended)**
-
-```bash
-# Reinstall to get the latest version
-/plugin install claude-vibe@physics91
-```
-
-**Method 2: Manual Update**
-
-```bash
-# Navigate to plugin directory
-cd ~/.claude/plugins/claude-vibe
-
-# Pull latest changes
-git pull origin main
-```
-
-### Check Current Version
-
-Check your installed version in `.claude-plugin/plugin.json`:
-
-```bash
-cat ~/.claude/plugins/claude-vibe/.claude-plugin/plugin.json | grep version
-```
-
-Or check the [CHANGELOG.md](./CHANGELOG.md) for version history and release notes.
-
-**Note:** Claude Code currently does not have automatic plugin updates. You need to manually update when new versions are released.
-
-## Structure
-
-```
-├── .claude-plugin/
-│   ├── plugin.json        # Plugin manifest
-│   └── marketplace.json   # Marketplace definition
-├── hooks/
-│   ├── hooks.json              # Hook configuration
-│   ├── pre-compact.ps1         # Captures context before compaction
-│   ├── session-start.ps1       # Restores context on session start
-│   └── user-prompt-submit.ps1  # Analyzes prompts and activates skill
-├── skills/
-│   └── prompt-clarifier/
-│       └── SKILL.md            # Prompt clarification skill
-├── lib/
-│   ├── core/
-│   │   ├── parser.ps1                  # AGENTS.md parser
-│   │   ├── storage.ps1                 # State storage/loading
-│   │   ├── prompt-analyzer.ps1         # Prompt ambiguity detection
-│   │   └── clarification-generator.ps1 # Question generation
-│   └── utils/
-│       └── security.ps1        # Security utilities
-├── schemas/                    # JSON schemas
-└── tests/
-    ├── test-*.ps1              # Test scripts
-    └── test-prompt-analyzer.ps1 # Prompt analyzer tests
 ```
 
 ## Features
 
-### Context Preservation
-- Automatic AGENTS.md parsing (project/global/local)
-- Automatic context saving on compaction
-- Automatic context restoration on session start
-- Task state tracking
+### 1. Context Preservation
+Automatically saves and restores context across sessions.
+- AGENTS.md parsing (project/global/local)
+- Context saving on compaction
+- Context restoration on session start
 
-### Vibe Coding Assistant (NEW!)
-- **Intelligent Prompt Analysis**: Automatically detects ambiguous or unclear prompts
-- **Interactive Clarification**: Uses AskUserQuestion to present multiple-choice selections
-- **Smart Question Generation**: Creates targeted questions based on detected issues
-- **Seamless Skill Integration**: Automatically activates the prompt-clarifier skill
-- **Detailed Logging**: Tracks prompt quality metrics for continuous improvement
+### 2. Prompt Clarifier
+Detects ambiguous prompts and asks clarifying questions.
+- Missing tech stack detection
+- Vague instruction identification
+- Interactive multi-choice selections
 
-The Vibe Coding Assistant helps you write better prompts by:
-- Detecting missing technical details (tech stack, file paths, requirements)
-- Identifying vague instructions (unclear verbs, excessive pronouns)
-- Presenting interactive selections for quick clarification
-- Guiding you toward more effective vibe coding practices
+### 3. Context Manager (NEW)
+Optimizes context window by controlling MCP servers, agents, and commands per project.
 
-**How it works:**
-1. You submit a prompt → Hook analyzes for ambiguity
-2. If ambiguous → Activates prompt-clarifier skill
-3. Claude asks clarifying questions → You select from options
-4. Claude proceeds with full context → Better results!
+```
+/context-setup   # Interactive setup
+/context-status  # Check current status
+```
+
+**Presets:**
+| Preset | Description | Token Savings |
+|--------|-------------|---------------|
+| Minimal | Core tools only | ~45,000 |
+| Web Dev | React/Vue/Next.js | ~28,000 |
+| API Dev | Backend/microservices | ~25,000 |
+| Data Science | ML/AI projects | ~30,000 |
+
+**Features:**
+- Auto-detect project type (package.json, requirements.txt, etc.)
+- Per-project MCP server control via `.claude/.mcp.json`
+- Managed slash commands (file-based enable/disable)
+- Token savings estimation
+
+## Structure
+
+```
+├── hooks/                  # Hook scripts
+├── skills/                 # Skills (prompt-clarifier)
+├── commands/               # Active slash commands
+├── managed-commands/       # Controllable commands
+├── presets/                # Context presets
+├── lib/core/               # Core modules
+│   ├── parser.ps1
+│   ├── storage.ps1
+│   ├── prompt-analyzer.ps1
+│   ├── preset-manager.ps1
+│   ├── project-detector.ps1
+│   ├── mcp-config-generator.ps1
+│   └── command-manager.ps1
+└── tests/                  # Test scripts
+```
 
 ## Requirements
 
-### All Platforms
 - Claude Code v1.0.0+
-- Bash shell (available on all major platforms)
-- **Python 2.7+ or Python 3.x** (required for JSON processing in bash hooks)
+- PowerShell 5.1+ (Windows) / Bash 4.0+ (Linux/macOS)
+- Python 2.7+ or 3.x
 
-### Platform-Specific
-- **Windows**: PowerShell 5.1+ or PowerShell Core 7+ (automatically used by wrapper scripts)
-- **Linux/macOS**: Bash 4.0+ (automatically used by wrapper scripts)
-
-**Cross-Platform Support:**
-This plugin now supports Windows, Linux, and macOS through platform detection wrapper scripts. The appropriate script (.ps1 or .sh) is automatically selected based on your operating system.
-
-## Usage Examples
-
-### Vibe Coding Assistant
-
-The plugin automatically analyzes your prompts when you submit them. Here are some examples:
-
-#### Example 1: Ambiguous Prompt
-```
-User: "웹사이트 만들어줘"
-```
-
-**Claude's Response (with plugin):**
-```
-좋습니다. 웹사이트 개발을 도와드리겠습니다.
-더 정확한 결과를 위해 몇 가지 질문드리겠습니다.
-
-[AskUserQuestion appears with selections]
-
-어떤 기술 스택을 사용하고 싶으신가요?
-○ React + TypeScript + Node.js
-○ Vue + JavaScript + Express
-○ Vanilla JS + Python + FastAPI
-○ 직접 입력할게요
-
-[After selection]
-
-주요 기능을 선택해주세요 (여러 개 선택 가능):
-□ 사용자 인증/로그인
-□ 데이터베이스 CRUD
-□ 파일 업로드
-□ 실시간 통신 (WebSocket)
-□ 결제 시스템
-□ 관리자 대시보드
-
-[After selections, Claude proceeds with implementation]
-```
-
-#### Example 2: Clear Prompt
-```
-User: "React와 TypeScript를 사용해서 사용자 인증 기능이 있는 Todo 앱을 만들어주세요.
-PostgreSQL과 Prisma를 백엔드로 사용합니다"
-```
-
-**Result:** No clarification needed - Claude proceeds directly with implementation.
-
-### Testing
-
-#### Unit Tests - Prompt Analyzer
-
-Run the unit test suite to see how different prompts are analyzed:
+## Testing
 
 ```powershell
+# Unit tests
 .\tests\test-prompt-analyzer.ps1
-```
+.\tests\test-command-manager.ps1
 
-#### End-to-End Tests
-
-Run the complete e2e test suite to verify the entire workflow:
-
-```powershell
+# E2E tests
+.\tests\test-e2e-scenarios.ps1
 .\tests\e2e\run-e2e-tests.ps1
 ```
 
-For verbose output:
+## Updating
 
-```powershell
-.\tests\e2e\run-e2e-tests.ps1 -Verbose
+```bash
+/plugin install claude-vibe@physics91
 ```
-
-**What the e2e tests cover:**
-- ✅ Ambiguous prompt detection (7 scenarios)
-- ✅ Skill activation verification
-- ✅ Expected ambiguity reasons validation
-- ✅ Output structure checks
-- ✅ Log file creation and content
-- ✅ Module dependency loading
-
-**Example output:**
-```
-================================
-Vibe Coding Assistant E2E Tests
-================================
-
-Running 7 test scenarios...
-
-Scenario: Ambiguous Prompt - Too Short
-  Prompt: '이거 고쳐줘'
-  ✓ Hook executes successfully
-  ✓ Skill should be activated
-  ✓ Expected ambiguity reasons detected
-  ✓ Output contains required sections
-
-Scenario: Clear Prompt - Specific with Tech Stack
-  Prompt: 'React와 TypeScript를 사용해서...'
-  ✓ Hook executes successfully
-  ✓ Skill should NOT be activated
-  ✓ Output is minimal (no clarification needed)
-
-...
-
-================================
-Test Summary
-================================
-Total Tests: 25
-Passed: 25
-Failed: 0
-Success Rate: 100%
-
-✓ All tests passed!
-```
-
-### Viewing Logs
-
-Prompt analysis logs are saved in the `logs/` directory:
-- `prompt-clarification_*.log`: Detailed analysis of ambiguous prompts
-- `hook-error.log`: Any errors during hook execution
-
-## Configuration
-
-### Adjusting Ambiguity Threshold
-
-Edit `lib/core/prompt-analyzer.ps1` to customize the ambiguity detection threshold (default: 40):
-
-```powershell
-# Line 115 in prompt-analyzer.ps1
-$isAmbiguous = $ambiguityScore -ge 40  # Lower = more sensitive
-```
-
-### Disabling Specific Checks
-
-Comment out unwanted checks in the `Test-PromptAmbiguity` function.
 
 ## License
 

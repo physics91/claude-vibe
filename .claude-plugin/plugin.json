@@ -1,7 +1,7 @@
 {
   "name": "claude-vibe",
-  "version": "0.2.0",
-  "description": "A comprehensive Claude Code plugin with intelligent context management and vibe coding support through interactive prompt clarification",
+  "version": "0.3.0",
+  "description": "A comprehensive Claude Code plugin with intelligent context management, vibe coding support, and context window optimization through MCP/agent selection",
   "author": {
     "name": "physics91",
     "url": "https://github.com/physics91"
@@ -18,7 +18,10 @@
     "session",
     "preservation",
     "interactive",
-    "skill"
+    "skill",
+    "context-manager",
+    "mcp",
+    "token-optimization"
   ],
   "hooks": "./hooks/hooks.json",
   "skills": "./skills",

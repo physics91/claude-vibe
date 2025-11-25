@@ -1,0 +1,155 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://physics91.com/claude-vibe/schemas/context-profile.schema.json",
+  "title": "ContextProfile",
+  "description": "Schema for project-level context profile configuration",
+  "type": "object",
+  "required": ["version", "name"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "description": "Schema version",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "default": "1.0.0"
+    },
+    "name": {
+      "type": "string",
+      "description": "Profile name",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "displayName": {
+      "type": "string",
+      "description": "Human-readable profile name",
+      "maxLength": 100
+    },
+    "description": {
+      "type": "string",
+      "description": "Profile description",
+      "maxLength": 500
+    },
+    "extends": {
+      "type": "string",
+      "description": "Base preset to extend (e.g., 'web-dev', 'minimal')",
+      "maxLength": 50
+    },
+    "detection": {
+      "type": "object",
+      "description": "Auto-detection rules for this profile",
+      "properties": {
+        "files": {
+          "type": "array",
+          "description": "Files that indicate this project type",
+          "items": { "type": "string", "maxLength": 100 },
+          "maxItems": 20
+        },
+        "dependencies": {
+          "type": "array",
+          "description": "Dependencies that indicate this project type",
+          "items": { "type": "string", "maxLength": 100 },
+          "maxItems": 50
+        },
+        "patterns": {
+          "type": "array",
+          "description": "Directory patterns that indicate this project type",
+          "items": { "type": "string", "maxLength": 100 },
+          "maxItems": 20
+        }
+      },
+      "additionalProperties": false
+    },
+    "mcp": {
+      "type": "object",
+      "description": "MCP server configuration",
+      "properties": {
+        "enabled": {
+          "type": "array",
+          "description": "List of MCP servers to enable",
+          "items": { "type": "string", "maxLength": 100 },
+          "maxItems": 50
+        },
+        "disabled": {
+          "type": "array",
+          "description": "List of MCP servers to disable (* for all not in enabled)",
+          "items": { "type": "string", "maxLength": 100 },
+          "maxItems": 50
+        }
+      },
+      "additionalProperties": false
+    },
+    "agents": {
+      "type": "object",
+      "description": "Custom agents configuration",
+      "properties": {
+        "enabled": {
+          "type": "array",
+          "description": "List of agents to enable",
+          "items": { "type": "string", "maxLength": 100 },
+          "maxItems": 100
+        },
+        "disabled": {
+          "type": "array",
+          "description": "List of agents to disable (* for all not in enabled)",
+          "items": { "type": "string", "maxLength": 100 },
+          "maxItems": 100
+        }
+      },
+      "additionalProperties": false
+    },
+    "commands": {
+      "type": "object",
+      "description": "Slash commands configuration",
+      "properties": {
+        "enabled": {
+          "type": "array",
+          "description": "List of commands to enable (* for all)",
+          "items": { "type": "string", "maxLength": 100 },
+          "maxItems": 50
+        },
+        "disabled": {
+          "type": "array",
+          "description": "List of commands to disable",
+          "items": { "type": "string", "maxLength": 100 },
+          "maxItems": 50
+        }
+      },
+      "additionalProperties": false
+    },
+    "estimatedTokenSaved": {
+      "type": "integer",
+      "description": "Estimated tokens saved by this profile",
+      "minimum": 0,
+      "maximum": 200000
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata",
+      "properties": {
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "autoDetected": {
+          "type": "boolean",
+          "description": "Whether this profile was auto-detected"
+        },
+        "detectedType": {
+          "type": "string",
+          "description": "Detected project type"
+        },
+        "confidence": {
+          "type": "number",
+          "description": "Detection confidence (0-1)",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

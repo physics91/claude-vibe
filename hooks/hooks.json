@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/pre-compact\"",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/pre-compact.cmd\"",
             "timeout": 5000
           }
         ]
@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/session-start\"",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.cmd\"",
             "timeout": 5000
           }
         ]
@@ -30,7 +30,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/user-prompt-submit\"",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/user-prompt-submit.cmd\"",
             "timeout": 5000
           }
         ]

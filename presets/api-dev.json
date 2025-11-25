@@ -1,0 +1,70 @@
+{
+  "version": "1.0.0",
+  "name": "api-dev",
+  "displayName": "API Development",
+  "description": "백엔드 API, 마이크로서비스 개발용 프리셋",
+  "detection": {
+    "files": [
+      "package.json",
+      "requirements.txt",
+      "pyproject.toml",
+      "go.mod",
+      "Cargo.toml",
+      "pom.xml",
+      "build.gradle",
+      "composer.json"
+    ],
+    "dependencies": [
+      "express",
+      "fastify",
+      "koa",
+      "nestjs",
+      "@nestjs/core",
+      "fastapi",
+      "flask",
+      "django",
+      "gin",
+      "echo",
+      "spring-boot",
+      "actix-web"
+    ],
+    "patterns": [
+      "src/routes/**",
+      "src/controllers/**",
+      "src/api/**",
+      "api/**",
+      "routes/**"
+    ]
+  },
+  "mcp": {
+    "enabled": ["github", "brave-search", "context7"],
+    "disabled": ["playwright", "filesystem"]
+  },
+  "agents": {
+    "enabled": [
+      "api-expert",
+      "nodejs-expert",
+      "python-expert",
+      "database-expert",
+      "security-expert",
+      "microservices-architect",
+      "devops-expert",
+      "docker-expert"
+    ],
+    "disabled": [
+      "react-expert",
+      "vue-expert",
+      "angular-expert",
+      "css-expert",
+      "ui-ux-designer",
+      "ios-expert",
+      "android-expert",
+      "flutter-expert"
+    ]
+  },
+  "commands": {
+    "enabled": ["*"],
+    "disabled": []
+  },
+  "estimatedTokenSaved": 25000
+}

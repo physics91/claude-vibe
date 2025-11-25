@@ -1,0 +1,67 @@
+{
+  "version": "1.0.0",
+  "name": "data-science",
+  "displayName": "Data Science & ML",
+  "description": "데이터 분석, 머신러닝, AI 프로젝트용 프리셋",
+  "detection": {
+    "files": [
+      "requirements.txt",
+      "pyproject.toml",
+      "setup.py",
+      "environment.yml",
+      "*.ipynb"
+    ],
+    "dependencies": [
+      "pandas",
+      "numpy",
+      "scikit-learn",
+      "tensorflow",
+      "torch",
+      "pytorch",
+      "keras",
+      "matplotlib",
+      "seaborn",
+      "jupyter",
+      "jupyterlab",
+      "xgboost",
+      "lightgbm"
+    ],
+    "patterns": [
+      "notebooks/**",
+      "data/**",
+      "models/**",
+      "experiments/**"
+    ]
+  },
+  "mcp": {
+    "enabled": ["brave-search", "context7", "github"],
+    "disabled": ["playwright", "filesystem", "kubernetes"]
+  },
+  "agents": {
+    "enabled": [
+      "python-expert",
+      "ml-engineer",
+      "deep-learning-expert",
+      "data-analyst",
+      "nlp-expert",
+      "computer-vision-expert",
+      "mlops-specialist",
+      "database-expert"
+    ],
+    "disabled": [
+      "react-expert",
+      "vue-expert",
+      "angular-expert",
+      "css-expert",
+      "ios-expert",
+      "android-expert",
+      "flutter-expert",
+      "ui-ux-designer"
+    ]
+  },
+  "commands": {
+    "enabled": ["*"],
+    "disabled": []
+  },
+  "estimatedTokenSaved": 30000
+}
