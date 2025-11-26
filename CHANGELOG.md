@@ -5,6 +5,64 @@ All notable changes to the Claude Vibe plugin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-11-26
+
+### Added
+- **Express Commands** (10 new aliases):
+  - `/r` - Quick code/PR review
+  - `/t` - Generate tests
+  - `/f` - Fix issues
+  - `/a` - Analyze code
+  - `/e` - Explain code
+  - `/rf` - Refactor code
+  - `/cs` - Context setup (alias for /context-setup)
+  - `/st` - Skill test
+  - `/d` - Debug toggle
+  - `/init` - Init AGENTS.md
+
+- **Pattern Learning Engine**:
+  - PostToolUse hook for tracking tool usage patterns
+  - Inefficiency detection (repeated reads, fragmented edits)
+  - Real-time optimization suggestions
+  - Rate-limited hints (10 min cooldown)
+  - Pattern storage in `~/.claude/claude-vibe/patterns.json`
+
+- **Session Memory**:
+  - Cross-session learning per project
+  - File insights storage
+  - Error solution memory
+  - Learned pattern persistence
+  - Memory storage in `~/.claude/claude-vibe/memory/`
+
+- **Project Profile Manager**:
+  - Project-specific preferences
+  - Sticky options for express commands
+  - Profile persistence in `.claude/project-profile.json`
+
+- **Skill Suggester**:
+  - Auto skill detection by file extension
+  - Directory-based skill suggestions
+  - Framework detection from imports
+  - Context shift detection
+
+### New Modules
+- `lib/core/pattern-analyzer.ps1` - Tool usage pattern analysis
+- `lib/core/session-memory.ps1` - Cross-session memory
+- `lib/core/skill-suggester.ps1` - Smart skill suggestions
+- `lib/core/project-profile-manager.ps1` - Project preferences
+
+### Changed
+- Commands: 7 → 17 (+10 express aliases)
+- Hooks: 3 → 4 (+PostToolUse)
+- Core modules: 7 → 11 (+4)
+
+### Compatibility
+- **Backward compatible** with v0.2.0
+- All existing skills, presets, and hooks work unchanged
+- New features are opt-in and non-blocking
+
+---
+
 ## [0.2.0] - 2025-11-26
 
 ### Added
@@ -121,6 +179,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[0.3.0]: https://github.com/physics91/claude-vibe/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/physics91/claude-vibe/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/physics91/claude-vibe/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/physics91/claude-vibe/releases/tag/v0.0.1

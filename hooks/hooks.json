@@ -35,6 +35,18 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use.cmd\"",
+            "timeout": 3000
+          }
+        ]
+      }
     ]
   }
 }

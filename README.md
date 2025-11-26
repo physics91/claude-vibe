@@ -15,14 +15,28 @@ Claude Code plugin for intelligent context management and code review automation
 ## Quickstart
 
 ```bash
-# 1. Setup context for your project
+# 1. Quick setup with express command
+/cs auto
+
+# 2. Or use full setup wizard
 /context-setup
 
-# 2. Check current configuration
+# 3. Check current configuration
 /context-status
+```
 
-# 3. Initialize AGENTS.md (optional)
-/init-agents
+**Express Commands (v0.3.0):**
+```bash
+/r          # Quick review
+/t          # Generate tests
+/f          # Fix issues
+/a          # Analyze code
+/e          # Explain code
+/rf         # Refactor
+/cs         # Context setup
+/st         # Skill test
+/d          # Debug toggle
+/init       # Init AGENTS.md
 ```
 
 **Example workflow:**
@@ -113,7 +127,26 @@ Automatically saves and restores context across sessions.
 - Context saving on compaction
 - Context restoration on session start
 
+### 6. Pattern Learning (v0.3.0)
+
+Learns from tool usage patterns to suggest optimizations:
+
+- Detects inefficient tool usage (repeated file reads, fragmented edits)
+- Provides real-time optimization suggestions
+- Tracks patterns per project via PostToolUse hook
+- Rate-limited suggestions (10 min cooldown)
+
+### 7. Session Memory (v0.3.0)
+
+Cross-session intelligence with project-specific memory:
+
+- Remembers successful approaches and error solutions
+- Stores file insights and learned patterns
+- Persists across sessions in `~/.claude/claude-vibe/memory/`
+
 ## Commands
+
+### Standard Commands
 
 | Command | Description |
 |---------|-------------|
@@ -125,11 +158,30 @@ Automatically saves and restores context across sessions.
 | `/debug` | Toggle debug mode |
 | `/validate-skill` | Validate skill definitions |
 
+### Express Commands (v0.3.0)
+
+| Alias | Full Command | Description |
+|-------|--------------|-------------|
+| `/r` | review | Quick code/PR review |
+| `/t` | test | Generate tests |
+| `/f` | fix | Fix issues |
+| `/a` | analyze | Code analysis |
+| `/e` | explain | Explain code |
+| `/rf` | refactor | Refactor code |
+| `/cs` | context-setup | Context setup |
+| `/st` | skill-test | Test skills |
+| `/d` | debug | Debug toggle |
+| `/init` | init-agents | Init AGENTS.md |
+
 ## Project Structure
 
 ```
 claude-vibe/
-├── hooks/                  # Hook scripts
+├── hooks/                  # Hook scripts (4 hooks)
+│   ├── session-start.ps1   # Context restoration
+│   ├── pre-compact.ps1     # Context saving
+│   ├── user-prompt-submit.ps1  # Prompt analysis
+│   └── post-tool-use.ps1   # Pattern learning (v0.3.0)
 ├── skills/                 # 31 review skills
 │   ├── code-reviewer/      # General code review
 │   ├── python-reviewer/    # Python review
@@ -138,7 +190,7 @@ claude-vibe/
 │   ├── docker-reviewer/    # Dockerfile review
 │   ├── sql-optimizer/      # SQL optimization
 │   └── ...                 # Additional skills
-├── commands/               # 7 slash commands
+├── commands/               # 17 slash commands (7 + 10 express)
 ├── presets/                # 9 context presets
 ├── lib/core/               # Core modules
 │   ├── parser.ps1
@@ -147,7 +199,11 @@ claude-vibe/
 │   ├── preset-manager.ps1
 │   ├── project-detector.ps1
 │   ├── mcp-config-generator.ps1
-│   └── command-manager.ps1
+│   ├── command-manager.ps1
+│   ├── pattern-analyzer.ps1       # v0.3.0
+│   ├── session-memory.ps1         # v0.3.0
+│   ├── skill-suggester.ps1        # v0.3.0
+│   └── project-profile-manager.ps1 # v0.3.0
 └── tests/                  # Test scripts
 ```
 
