@@ -104,3 +104,21 @@
 - Run E2E tests before committing hook changes
 - Verify both ambiguous and clear prompt scenarios
 - Check log output in `logs/` directory
+
+### Progress Management
+
+**MUST** use `AGENTS_PROGRESS.md` to track work progress:
+- Keep only **최근 5개** items (including completed tasks)
+- Format each item as: `[status] Task description (timestamp)`
+- Statuses: `[ ]` Pending, `[~]` In Progress, `[x]` Completed
+- **ALWAYS** clean up old items when adding new ones
+- Never let this file grow beyond 5 active items
+
+**Example AGENTS_PROGRESS.md:**
+```markdown
+# Work Progress
+
+[~] Implementing user authentication (2025-01-15)
+[x] Fixed database connection bug (2025-01-14)
+[x] Added unit tests for API (2025-01-13)
+```
