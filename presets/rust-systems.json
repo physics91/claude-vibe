@@ -1,0 +1,56 @@
+{
+  "version": "1.0.0",
+  "name": "rust-systems",
+  "displayName": "Rust Systems",
+  "description": "Rust systems programming and API development preset",
+  "detection": {
+    "files": [
+      "Cargo.toml",
+      "Cargo.lock",
+      "src/main.rs",
+      "src/lib.rs"
+    ],
+    "dependencies": [
+      "tokio",
+      "axum",
+      "actix-web",
+      "rocket",
+      "serde",
+      "sqlx"
+    ],
+    "patterns": [
+      "src/**/*.rs",
+      "tests/**/*.rs",
+      "benches/**/*.rs"
+    ]
+  },
+  "mcp": {
+    "enabled": ["github", "brave-search", "context7"],
+    "disabled": ["playwright", "filesystem"]
+  },
+  "agents": {
+    "enabled": [
+      "api-expert",
+      "database-expert",
+      "security-expert",
+      "devops-expert",
+      "performance-tester"
+    ],
+    "disabled": [
+      "react-expert",
+      "vue-expert",
+      "angular-expert",
+      "css-expert",
+      "ios-expert",
+      "android-expert",
+      "flutter-expert",
+      "ml-engineer",
+      "python-expert"
+    ]
+  },
+  "commands": {
+    "enabled": ["*"],
+    "disabled": []
+  },
+  "estimatedTokenSaved": 32000
+}

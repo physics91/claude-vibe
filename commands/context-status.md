@@ -1,62 +1,62 @@
 ---
-description: 현재 프로젝트의 컨텍스트 설정 상태를 표시합니다
+description: Display current project context configuration status
 allowed-tools: Read, Glob
 ---
 
 # Context Status
 
-현재 프로젝트의 컨텍스트 설정 상태를 확인합니다.
+Check current project context configuration.
 
-## 확인 사항
+## Checks
 
-### 1. 프로젝트 프로필 확인
-`.claude/context-profile.json` 파일을 읽어 현재 설정을 확인합니다.
+### 1. Project Profile
+Read `.claude/context-profile.json` for current settings.
 
-### 2. MCP 설정 확인
-`.claude/.mcp.json` 파일을 읽어 활성화된 MCP 서버를 확인합니다.
+### 2. MCP Configuration
+Read `.claude/.mcp.json` for active MCP servers.
 
-### 3. 전역 MCP 설정과 비교
-`~/.claude/claude_code_config.json`과 비교하여 활성/비활성 상태를 표시합니다.
+### 3. Compare with Global Settings
+Compare with `~/.claude/claude_code_config.json` to show active/inactive status.
 
-## 출력 형식
+## Output Format
 
-프로필이 있는 경우:
+**With profile:**
 ```
-## 현재 컨텍스트 상태
+## Current Context Status
 
-**프로필**: [프로필 이름]
-**프로젝트**: [프로젝트 경로]
-**마지막 업데이트**: [날짜]
+**Profile**: [profile name]
+**Project**: [project path]
+**Last updated**: [date]
 
-### MCP 서버 (N/M 활성)
-[x] github - GitHub 연동
-[x] playwright - 브라우저 자동화
-[x] brave-search - 웹 검색
-[ ] filesystem - 파일시스템 (비활성)
-[ ] openrouter - AI 라우팅 (비활성)
+### MCP Servers (N/M active)
+[x] github - GitHub integration
+[x] playwright - Browser automation
+[x] brave-search - Web search
+[ ] filesystem - Filesystem (inactive)
+[ ] openrouter - AI routing (inactive)
 
-### 활성화된 에이전트
+### Active Agents
 react-expert, vue-expert, css-expert, nodejs-expert, frontend-optimizer
 
-### 비활성화된 에이전트
+### Inactive Agents
 ios-expert, android-expert, flutter-expert, ml-engineer, ...
 
-### 토큰 절약
-예상 절약량: ~28,000 tokens (14%)
+### Token Savings
+Expected: ~28,000 tokens (14%)
 
 ---
-설정 변경: /context-setup
+Change settings: /context-setup
 ```
 
-프로필이 없는 경우:
+**Without profile:**
 ```
-## 컨텍스트 상태
+## Context Status
 
-이 프로젝트에는 컨텍스트 프로필이 설정되어 있지 않습니다.
+No context profile configured for this project.
 
-**프로젝트 타입 감지 결과**: [감지된 타입]
-**추천 프리셋**: [추천 프리셋]
-**예상 토큰 절약**: ~[N] tokens
+**Detected project type**: [detected type]
+**Recommended preset**: [preset]
+**Expected token savings**: ~[N] tokens
 
-컨텍스트를 최적화하려면 `/context-setup`을 실행하세요.
+Run `/context-setup` to optimize context.
 ```

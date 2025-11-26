@@ -1,0 +1,58 @@
+{
+  "version": "1.0.0",
+  "name": "full-stack",
+  "displayName": "Full Stack",
+  "description": "Full stack development preset combining web, API, and database skills",
+  "detection": {
+    "files": [
+      "package.json",
+      "requirements.txt",
+      "pyproject.toml",
+      "docker-compose.yml",
+      "prisma/schema.prisma"
+    ],
+    "dependencies": [
+      "react",
+      "next",
+      "express",
+      "fastapi",
+      "prisma",
+      "typeorm",
+      "sqlalchemy"
+    ],
+    "patterns": [
+      "src/**/*",
+      "frontend/**/*",
+      "backend/**/*",
+      "api/**/*"
+    ]
+  },
+  "mcp": {
+    "enabled": ["github", "playwright", "brave-search", "context7"],
+    "disabled": ["filesystem"]
+  },
+  "agents": {
+    "enabled": [
+      "react-expert",
+      "nodejs-expert",
+      "python-expert",
+      "api-expert",
+      "database-expert",
+      "security-expert",
+      "docker-expert",
+      "devops-expert"
+    ],
+    "disabled": [
+      "ios-expert",
+      "android-expert",
+      "flutter-expert",
+      "ml-engineer",
+      "deep-learning-expert"
+    ]
+  },
+  "commands": {
+    "enabled": ["*"],
+    "disabled": []
+  },
+  "estimatedTokenSaved": 20000
+}

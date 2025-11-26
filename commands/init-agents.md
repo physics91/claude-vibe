@@ -1,29 +1,27 @@
 ---
-description: Initialize AGENTS.md file with codebase documentation (like /init but for AGENTS.md)
+description: Initialize AGENTS.md with codebase documentation
 allowed-tools: Read, Glob, Grep, Write, Bash, LS
 ---
 
 # Initialize AGENTS.md
 
-**IMPORTANT: Before proceeding, check if AGENTS.md already exists in the project root directory.**
+**Check if AGENTS.md exists before proceeding.**
 
-First, check for existing AGENTS.md:
-- If `AGENTS.md` already exists in the project root, **DO NOT overwrite it**. Instead, inform the user that AGENTS.md already exists and ask if they want to update it manually.
-
-If AGENTS.md does not exist, analyze the codebase and create a comprehensive AGENTS.md file in the project root directory with the following structure:
+- If exists: Inform user and ask if they want to update manually
+- If not exists: Create comprehensive AGENTS.md in project root
 
 ## Required Sections
 
 ### 1. Project Overview
-- Brief description of the project
-- Main technologies and frameworks used
+- Brief project description
+- Main technologies and frameworks
 - Project structure overview
 
 ### 2. Build & Run Commands
-- How to install dependencies
-- How to build the project
-- How to run the project
-- How to run tests
+- Install dependencies
+- Build project
+- Run project
+- Run tests
 
 ### 3. Code Style & Conventions
 - Naming conventions (files, functions, variables, classes)
@@ -33,23 +31,23 @@ If AGENTS.md does not exist, analyze the codebase and create a comprehensive AGE
 
 ### 4. Architecture Guidelines
 - Directory structure explanation
-- Key design patterns used
+- Key design patterns
 - Module organization
 
 ### 5. Agent Instructions
-- Key directives for AI agents working on this codebase
-- Important constraints (MUST, NEVER, ALWAYS patterns)
+- Key directives for AI agents
+- Important constraints (MUST, NEVER, ALWAYS)
 - Project-specific rules
 
 ## Analysis Steps
 
-1. Scan for package.json, Cargo.toml, pyproject.toml, go.mod, pom.xml, or similar config files
-2. Check for existing README.md, CONTRIBUTING.md for context
+1. Scan config files: package.json, Cargo.toml, pyproject.toml, go.mod, pom.xml
+2. Check README.md, CONTRIBUTING.md for context
 3. Analyze directory structure
-4. Look for .editorconfig, .prettierrc, eslint config, etc.
+4. Check .editorconfig, .prettierrc, eslint config
 5. Identify test frameworks and patterns
 6. Look for CI/CD configurations
 
 ## Output
 
-Create the AGENTS.md file in the project root with all gathered information, formatted clearly and concisely.
+Create AGENTS.md in project root with all gathered information, formatted clearly and concisely.

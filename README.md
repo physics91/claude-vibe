@@ -1,6 +1,6 @@
 # Claude Vibe
 
-Claude Code plugin for intelligent context management and prompt optimization.
+Claude Code plugin for intelligent context management and code review automation.
 
 [한국어 문서](./README.ko.md)
 
@@ -12,50 +12,134 @@ Claude Code plugin for intelligent context management and prompt optimization.
 /plugin install claude-vibe@physics91
 ```
 
+## Quickstart
+
+```bash
+# 1. Setup context for your project
+/context-setup
+
+# 2. Check current configuration
+/context-status
+
+# 3. Initialize AGENTS.md (optional)
+/init-agents
+```
+
+**Example workflow:**
+```
+You: "Review my FastAPI code"
+→ Plugin detects Python project, activates fastapi-reviewer skill
+→ Analyzes Pydantic models, async patterns, dependency injection
+→ Returns structured review with recommendations
+```
+
 ## Features
 
-### 1. Context Preservation
+### 1. Intelligent Code Review (31 Skills)
+
+Automated code review for multiple languages and frameworks:
+
+| Category | Skills | Focus Areas |
+|----------|--------|-------------|
+| **Web** | code-reviewer, nextjs-reviewer, test-generator, security-scanner, perf-analyzer, coverage-analyzer, api-documenter, readme-generator | React, Vue, Next.js, TypeScript |
+| **Python** | python-reviewer, fastapi-reviewer, django-reviewer, flask-reviewer, python-data-reviewer | PEP8, async, ORM, data processing |
+| **Go/Rust** | go-reviewer, go-api-reviewer, rust-reviewer, rust-api-reviewer | Goroutines, ownership, API patterns |
+| **Kotlin** | kotlin-android-reviewer, kotlin-spring-reviewer, kotlin-multiplatform-reviewer | Android, Spring Boot, KMP |
+| **DevOps** | docker-reviewer, k8s-reviewer, terraform-reviewer, ci-cd-reviewer, infra-security-reviewer | Containers, IaC, CI/CD, security |
+| **Database** | sql-optimizer, schema-reviewer, orm-reviewer, migration-checker | Query optimization, schema design |
+| **Core** | prompt-clarifier, context-manager | Context optimization |
+
+### 2. Context Manager
+
+Optimizes context window by controlling MCP servers, agents, and commands per project.
+
+```bash
+/context-setup   # Interactive setup wizard
+/context-status  # Check current configuration
+```
+
+**9 Presets Available:**
+
+| Preset | Description | Token Savings |
+|--------|-------------|---------------|
+| minimal | Core tools only | ~45,000 |
+| web-dev | React/Vue/Next.js frontend | ~28,000 |
+| python-web | FastAPI/Django/Flask backend | ~30,000 |
+| go-backend | Gin/Echo/Fiber/Chi API | ~28,000 |
+| rust-systems | Actix-web/Axum systems | ~32,000 |
+| devops | Docker/K8s/Terraform | ~25,000 |
+| api-dev | Backend microservices | ~25,000 |
+| data-science | ML/AI/Data projects | ~30,000 |
+| full-stack | Web + API + Database | ~20,000 |
+
+**8 Agent Categories:**
+
+| Category | Agents |
+|----------|--------|
+| Frontend | react-expert, vue-expert, nextjs-debugger, css-expert |
+| Python | python-expert, fastapi, django, flask |
+| Go/Rust | go, rust, systems programming |
+| Backend | nodejs-expert, api-expert, microservices-architect |
+| DevOps | docker-expert, devops-expert, sre-specialist |
+| Database | database-expert, data-analyst |
+| Mobile | ios-expert, android-expert, flutter-expert |
+| AI/ML | ml-engineer, deep-learning-expert, nlp-expert |
+
+### 3. Prompt Clarifier
+
+Detects ambiguous prompts and asks clarifying questions with interactive selections.
+
+- Missing tech stack detection
+- Vague instruction identification
+- Multi-choice feature selection
+- Project scope clarification
+
+### 4. Debug Tools
+
+Developer tools for troubleshooting and validation:
+
+| Command | Description |
+|---------|-------------|
+| `/skill-test` | Test skill detection against sample input |
+| `/skill-log` | View skill activation history |
+| `/debug` | Toggle verbose debug mode |
+| `/validate-skill` | Validate custom skill definitions |
+
+### 5. Context Preservation
+
 Automatically saves and restores context across sessions.
+
 - AGENTS.md parsing (project/global/local)
 - Context saving on compaction
 - Context restoration on session start
 
-### 2. Prompt Clarifier
-Detects ambiguous prompts and asks clarifying questions.
-- Missing tech stack detection
-- Vague instruction identification
-- Interactive multi-choice selections
+## Commands
 
-### 3. Context Manager (NEW)
-Optimizes context window by controlling MCP servers, agents, and commands per project.
+| Command | Description |
+|---------|-------------|
+| `/context-setup` | Interactive context configuration |
+| `/context-status` | Display current context status |
+| `/init-agents` | Initialize AGENTS.md for project |
+| `/skill-test` | Test skill detection logic |
+| `/skill-log` | View activation history |
+| `/debug` | Toggle debug mode |
+| `/validate-skill` | Validate skill definitions |
 
-```
-/context-setup   # Interactive setup
-/context-status  # Check current status
-```
-
-**Presets:**
-| Preset | Description | Token Savings |
-|--------|-------------|---------------|
-| Minimal | Core tools only | ~45,000 |
-| Web Dev | React/Vue/Next.js | ~28,000 |
-| API Dev | Backend/microservices | ~25,000 |
-| Data Science | ML/AI projects | ~30,000 |
-
-**Features:**
-- Auto-detect project type (package.json, requirements.txt, etc.)
-- Per-project MCP server control via `.claude/.mcp.json`
-- Managed slash commands (file-based enable/disable)
-- Token savings estimation
-
-## Structure
+## Project Structure
 
 ```
+claude-vibe/
 ├── hooks/                  # Hook scripts
-├── skills/                 # Skills (prompt-clarifier)
-├── commands/               # Active slash commands
-├── managed-commands/       # Controllable commands
-├── presets/                # Context presets
+├── skills/                 # 31 review skills
+│   ├── code-reviewer/      # General code review
+│   ├── python-reviewer/    # Python review
+│   ├── go-reviewer/        # Go review
+│   ├── rust-reviewer/      # Rust review
+│   ├── docker-reviewer/    # Dockerfile review
+│   ├── sql-optimizer/      # SQL optimization
+│   └── ...                 # Additional skills
+├── commands/               # 7 slash commands
+├── presets/                # 9 context presets
 ├── lib/core/               # Core modules
 │   ├── parser.ps1
 │   ├── storage.ps1
@@ -66,6 +150,49 @@ Optimizes context window by controlling MCP servers, agents, and commands per pr
 │   └── command-manager.ps1
 └── tests/                  # Test scripts
 ```
+
+## Skill Categories
+
+### Web Development
+- **code-reviewer**: General TypeScript/JavaScript review
+- **nextjs-reviewer**: Next.js App Router, RSC patterns
+- **test-generator**: Jest/Vitest test generation
+- **security-scanner**: OWASP Top 10 vulnerability detection
+- **perf-analyzer**: Performance optimization
+- **coverage-analyzer**: Test coverage analysis
+- **api-documenter**: OpenAPI/Swagger documentation
+- **readme-generator**: README generation
+
+### Python Stack
+- **python-reviewer**: PEP8, type hints, Pythonic patterns
+- **fastapi-reviewer**: Pydantic, dependency injection, async
+- **django-reviewer**: ORM, views, templates, migrations
+- **flask-reviewer**: Blueprints, extensions, configuration
+- **python-data-reviewer**: Pandas/NumPy vectorization
+
+### Go/Rust
+- **go-reviewer**: Error handling, goroutines, interfaces
+- **go-api-reviewer**: Gin/Echo/Fiber router patterns
+- **rust-reviewer**: Ownership, lifetimes, error handling
+- **rust-api-reviewer**: Actix/Axum extractors, state
+
+### Kotlin
+- **kotlin-android-reviewer**: Jetpack Compose, lifecycle
+- **kotlin-spring-reviewer**: Spring Boot, coroutines
+- **kotlin-multiplatform-reviewer**: KMP shared code
+
+### DevOps
+- **docker-reviewer**: Multi-stage builds, layer optimization
+- **k8s-reviewer**: Resource limits, probes, RBAC
+- **terraform-reviewer**: Module structure, state management
+- **ci-cd-reviewer**: GitHub Actions, GitLab CI optimization
+- **infra-security-reviewer**: Secrets, network policies, IAM
+
+### Database
+- **sql-optimizer**: Query plans, index usage, N+1 detection
+- **schema-reviewer**: Normalization, constraints, indexes
+- **orm-reviewer**: Prisma/TypeORM/SQLAlchemy patterns
+- **migration-checker**: Backwards compatibility, rollback safety
 
 ## Requirements
 
@@ -90,6 +217,10 @@ Optimizes context window by controlling MCP servers, agents, and commands per pr
 ```bash
 /plugin install claude-vibe@physics91
 ```
+
+## Changelog
+
+See [CHANGELOG.md](./CHANGELOG.md) for version history.
 
 ## License
 

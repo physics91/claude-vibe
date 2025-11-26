@@ -2,7 +2,7 @@
   "version": "1.0.0",
   "name": "api-dev",
   "displayName": "API Development",
-  "description": "백엔드 API, 마이크로서비스 개발용 프리셋",
+  "description": "Backend API and microservices development preset",
   "detection": {
     "files": [
       "package.json",

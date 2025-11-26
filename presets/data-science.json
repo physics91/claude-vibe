@@ -2,7 +2,7 @@
   "version": "1.0.0",
   "name": "data-science",
   "displayName": "Data Science & ML",
-  "description": "데이터 분석, 머신러닝, AI 프로젝트용 프리셋",
+  "description": "Data analysis, machine learning, and AI projects preset",
   "detection": {
     "files": [
       "requirements.txt",

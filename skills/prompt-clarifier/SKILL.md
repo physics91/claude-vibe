@@ -1,126 +1,128 @@
 ---
 name: prompt-clarifier
-description: Automatically detects ambiguous prompts and asks targeted clarification questions using interactive selections to improve vibe coding effectiveness
+description: |
+  WHEN: Ambiguous prompts, vague requirements, missing context, unclear instructions
+  WHAT: Ambiguity detection + AskUserQuestion clarification + Interactive option selection
+  WHEN NOT: Clear detailed instructions → proceed directly
 ---
 
 # Prompt Clarifier Skill
 
 ## Purpose
-This skill helps improve the quality of user prompts by detecting ambiguity and automatically asking clarification questions using the AskUserQuestion tool with interactive selections.
+Detects ambiguous prompts and asks clarification questions using AskUserQuestion with interactive selections.
 
 ## When to Use
-Activate this skill automatically when:
-1. You receive a prompt that seems ambiguous or lacks necessary details
-2. The user mentions wanting to create/build something without specifying technical details
-3. The prompt contains vague instructions like "fix this", "optimize", or "improve" without context
-4. The prompt uses excessive pronouns ("this", "that", "it") without clear references
+Activate when:
+1. Prompt seems ambiguous or lacks necessary details
+2. User wants to create/build something without specifying technical details
+3. Vague instructions like "fix this", "optimize", or "improve" without context
+4. Excessive pronouns ("this", "that", "it") without clear references
 
 ## Detection Criteria
-Consider a prompt ambiguous if it:
+Consider prompt ambiguous if it:
 - Is very short (< 5 words) and lacks context
-- Mentions a project type (website, app, tool) without specifying:
-  - Technology stack preferences
-  - Main features or requirements
-  - Project scope or constraints
-- Contains optimization requests without specifying the optimization aspect:
+- Mentions project type without specifying:
+  - Technology stack
+  - Main features
+  - Project scope
+- Contains optimization requests without specifying aspect:
   - Performance/speed
   - Memory usage
   - Code readability
   - Bundle size
-- References code/files without providing file paths or locations
-- Uses vague verbs without specifying what aspect to modify
+- References code/files without paths
+- Uses vague verbs without specifying target
 
-## How to Respond
+## Workflow
 
-### Step 1: Acknowledge the Request
+### Step 1: Acknowledge
 Briefly acknowledge what the user is asking for.
 
-### Step 2: Use AskUserQuestion for Clarification
-Present targeted questions using the AskUserQuestion tool with multiple-choice options.
+### Step 2: Use AskUserQuestion
+Present targeted questions with multiple-choice options.
 
 **Example Question Patterns:**
 
 For missing tech stack:
 ```
-AskUserQuestion: "어떤 기술 스택을 사용하고 싶으신가요?"
+AskUserQuestion: "Which tech stack would you like to use?"
 Options:
 - React + TypeScript + Node.js
 - Vue + JavaScript + Express
 - Vanilla JS + Python + FastAPI
-- 직접 입력할게요
+- I'll specify manually
 ```
 
 For missing features:
 ```
-AskUserQuestion: "주요 기능을 선택해주세요 (여러 개 선택 가능)"
+AskUserQuestion: "Select main features (multiple selection)"
 Options:
-- 사용자 인증/로그인
-- 데이터베이스 CRUD
-- 파일 업로드
-- 실시간 통신 (WebSocket)
-- 결제 시스템
-- 관리자 대시보드
+- User auth/login
+- Database CRUD
+- File upload
+- Real-time (WebSocket)
+- Payment system
+- Admin dashboard
+multiSelect: true
 ```
 
 For vague optimization:
 ```
-AskUserQuestion: "어떤 최적화를 원하시나요?"
+AskUserQuestion: "What type of optimization do you need?"
 Options:
-- 실행 속도/성능 개선
-- 메모리 사용량 감소
-- 번들 크기 축소
-- 코드 가독성 향상
+- Execution speed/performance
+- Memory usage reduction
+- Bundle size reduction
+- Code readability
 ```
 
 For project scope:
 ```
-AskUserQuestion: "프로젝트 규모는 어느 정도인가요?"
+AskUserQuestion: "What's the project scale?"
 Options:
-- 간단한 프로토타입/MVP
-- 중소 규모 프로젝트
-- 대규모 엔터프라이즈급
-- 잘 모르겠어요 (추천해주세요)
+- Simple prototype/MVP
+- Medium-scale project
+- Large enterprise-level
+- Not sure (recommend for me)
 ```
 
-### Step 3: Provide Helpful Guidance
-After receiving answers, proceed with the task using the enhanced context.
-
-If the user selects "직접 입력" or similar options, ask follow-up questions in a conversational manner.
+### Step 3: Provide Guidance
+After receiving answers, proceed with enhanced context.
 
 ## Response Template
 
-When you detect ambiguity:
+When detecting ambiguity:
 
-1. **Acknowledge**: "좋습니다. [요청 내용]을 도와드리겠습니다."
-2. **Explain**: "더 나은 결과를 위해 몇 가지 질문드리겠습니다."
+1. **Acknowledge**: "Got it. I'll help you with [request]."
+2. **Explain**: "To provide better results, I have a few questions."
 3. **Ask**: Use AskUserQuestion with relevant options
-4. **Proceed**: After getting answers, start implementation with full context
+4. **Proceed**: Start implementation with full context
 
 ## Examples
 
 ### Example 1: Vague Web Project
-**User**: "웹사이트 만들어줘"
+**User**: "Build me a website"
 
-**Your Response**:
+**Response**:
 ```
-좋습니다. 웹사이트 개발을 도와드리겠습니다.
-더 정확한 결과를 위해 몇 가지 질문드리겠습니다.
+Got it. I'll help you build a website.
+For better results, I have a few questions.
 
 [Use AskUserQuestion]
-1. 기술 스택 선택
-2. 주요 기능 선택
-3. 프로젝트 규모 확인
+1. Tech stack selection
+2. Main features selection
+3. Project scope
 
-[After getting answers, proceed with implementation]
+[After answers, proceed with implementation]
 ```
 
-### Example 2: Vague Optimization Request
-**User**: "코드 최적화해줘"
+### Example 2: Vague Optimization
+**User**: "Optimize this code"
 
-**Your Response**:
+**Response**:
 ```
-코드 최적화를 도와드리겠습니다.
-먼저 어떤 측면의 최적화가 필요한지 확인하겠습니다.
+I'll help optimize your code.
+First, let me understand what type of optimization you need.
 
 [Use AskUserQuestion for optimization type]
 [Ask for file path if not specified]
@@ -130,22 +132,22 @@ When you detect ambiguity:
 
 ## Best Practices
 1. **Keep questions focused**: Ask only what's necessary
-2. **Provide sensible defaults**: Include common choices in options
-3. **Allow custom input**: Always include "직접 입력" or "기타" option
+2. **Provide sensible defaults**: Include common choices
+3. **Allow custom input**: Include "Other" option
 4. **Be conversational**: Don't make it feel like a form
 5. **Group related questions**: Ask related questions together
 6. **Proceed efficiently**: Once you have enough context, start working
 
 ## Integration with Hook
-This skill works in conjunction with the UserPromptSubmit hook, which detects ambiguity and adds context. When you see a context marker like:
+Works with UserPromptSubmit hook. When you see:
 
 ```
 <!-- VIBE CODING ASSISTANT: PROMPT CLARIFICATION NEEDED -->
 ```
 
-You should automatically activate this skill and use AskUserQuestion to gather the needed information.
+Automatically activate this skill and use AskUserQuestion.
 
 ## Notes
-- This skill enhances vibe coding by ensuring Claude has sufficient context before starting work
-- The interactive selections make it easy for users to provide details without typing long responses
-- Always be respectful of user's time - if the prompt is clear enough, don't ask unnecessary questions
+- Enhances vibe coding by ensuring sufficient context
+- Interactive selections make it easy to provide details
+- Don't ask unnecessary questions if prompt is clear

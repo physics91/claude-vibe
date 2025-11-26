@@ -1,0 +1,55 @@
+{
+  "version": "1.0.0",
+  "name": "go-backend",
+  "displayName": "Go Backend",
+  "description": "Go backend development preset for Gin, Echo, Fiber, Chi APIs",
+  "detection": {
+    "files": [
+      "go.mod",
+      "go.sum",
+      "main.go",
+      "cmd/*/main.go"
+    ],
+    "dependencies": [
+      "github.com/gin-gonic/gin",
+      "github.com/labstack/echo",
+      "github.com/gofiber/fiber",
+      "github.com/go-chi/chi"
+    ],
+    "patterns": [
+      "cmd/**/*.go",
+      "internal/**/*.go",
+      "pkg/**/*.go",
+      "handlers/**/*.go"
+    ]
+  },
+  "mcp": {
+    "enabled": ["github", "brave-search", "context7"],
+    "disabled": ["playwright", "filesystem"]
+  },
+  "agents": {
+    "enabled": [
+      "api-expert",
+      "database-expert",
+      "security-expert",
+      "docker-expert",
+      "devops-expert",
+      "microservices-architect"
+    ],
+    "disabled": [
+      "react-expert",
+      "vue-expert",
+      "angular-expert",
+      "css-expert",
+      "ios-expert",
+      "android-expert",
+      "flutter-expert",
+      "ml-engineer"
+    ]
+  },
+  "commands": {
+    "enabled": ["*"],
+    "disabled": []
+  },
+  "estimatedTokenSaved": 28000
+}

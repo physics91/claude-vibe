@@ -1,0 +1,61 @@
+{
+  "version": "1.0.0",
+  "name": "python-web",
+  "displayName": "Python Web",
+  "description": "Python web development preset for FastAPI, Django, Flask",
+  "detection": {
+    "files": [
+      "requirements.txt",
+      "pyproject.toml",
+      "setup.py",
+      "manage.py",
+      "app.py",
+      "main.py"
+    ],
+    "dependencies": [
+      "fastapi",
+      "django",
+      "flask",
+      "uvicorn",
+      "gunicorn",
+      "sqlalchemy",
+      "pydantic"
+    ],
+    "patterns": [
+      "app/**/*.py",
+      "src/**/*.py",
+      "*/views.py",
+      "*/models.py",
+      "routers/**/*.py"
+    ]
+  },
+  "mcp": {
+    "enabled": ["github", "brave-search", "context7"],
+    "disabled": ["playwright", "filesystem"]
+  },
+  "agents": {
+    "enabled": [
+      "python-expert",
+      "api-expert",
+      "database-expert",
+      "security-expert",
+      "docker-expert",
+      "devops-expert"
+    ],
+    "disabled": [
+      "react-expert",
+      "vue-expert",
+      "angular-expert",
+      "css-expert",
+      "ios-expert",
+      "android-expert",
+      "flutter-expert",
+      "ml-engineer"
+    ]
+  },
+  "commands": {
+    "enabled": ["*"],
+    "disabled": []
+  },
+  "estimatedTokenSaved": 30000
+}

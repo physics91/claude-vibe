@@ -1,0 +1,57 @@
+{
+  "version": "1.0.0",
+  "name": "devops",
+  "displayName": "DevOps",
+  "description": "DevOps and infrastructure development preset for Docker, Kubernetes, Terraform, CI/CD",
+  "detection": {
+    "files": [
+      "Dockerfile",
+      "docker-compose.yml",
+      "docker-compose.yaml",
+      "*.tf",
+      "Chart.yaml",
+      "kustomization.yaml",
+      ".github/workflows/*.yml",
+      ".gitlab-ci.yml",
+      "Jenkinsfile"
+    ],
+    "dependencies": [],
+    "patterns": [
+      "k8s/**/*.yaml",
+      "manifests/**/*.yaml",
+      "terraform/**/*.tf",
+      "helm/**/*",
+      ".github/workflows/**"
+    ]
+  },
+  "mcp": {
+    "enabled": ["github", "brave-search", "context7"],
+    "disabled": ["playwright", "filesystem"]
+  },
+  "agents": {
+    "enabled": [
+      "devops-expert",
+      "docker-expert",
+      "cloud-architect",
+      "security-expert",
+      "sre-specialist",
+      "network-security-expert"
+    ],
+    "disabled": [
+      "react-expert",
+      "vue-expert",
+      "angular-expert",
+      "css-expert",
+      "ios-expert",
+      "android-expert",
+      "flutter-expert",
+      "ml-engineer",
+      "ui-ux-designer"
+    ]
+  },
+  "commands": {
+    "enabled": ["*"],
+    "disabled": []
+  },
+  "estimatedTokenSaved": 25000
+}

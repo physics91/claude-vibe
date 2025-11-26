@@ -2,7 +2,7 @@
   "version": "1.0.0",
   "name": "web-dev",
   "displayName": "Web Development",
-  "description": "React, Vue, Next.js 등 웹 프론트엔드 개발용 프리셋",
+  "description": "Web frontend development preset for React, Vue, Next.js",
   "detection": {
     "files": [
       "package.json",

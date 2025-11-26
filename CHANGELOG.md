@@ -5,6 +5,65 @@ All notable changes to the Claude Vibe plugin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2025-11-26
+
+### Added
+- **Python Stack Skills** (5 new):
+  - `python-reviewer`: PEP8, type hints, Pythonic patterns, error handling
+  - `fastapi-reviewer`: Pydantic models, dependency injection, async patterns
+  - `django-reviewer`: ORM patterns, views/templates, security, migrations
+  - `flask-reviewer`: Blueprint structure, extensions, request handling
+  - `python-data-reviewer`: Pandas/NumPy vectorization, memory efficiency
+
+- **Go/Rust Skills** (4 new):
+  - `go-reviewer`: Error handling, goroutines, interfaces, testing
+  - `go-api-reviewer`: Gin/Echo/Fiber router patterns, middleware
+  - `rust-reviewer`: Ownership, lifetimes, error handling, unsafe usage
+  - `rust-api-reviewer`: Actix/Axum async patterns, extractors, state
+
+- **DevOps Skills** (5 new):
+  - `docker-reviewer`: Multi-stage builds, layer optimization, security
+  - `k8s-reviewer`: Resource limits, probes, RBAC, Helm charts
+  - `terraform-reviewer`: Module structure, state management, security
+  - `ci-cd-reviewer`: GitHub Actions, GitLab CI, pipeline optimization
+  - `infra-security-reviewer`: Secrets management, network policies, IAM
+
+- **Database Skills** (4 new):
+  - `sql-optimizer`: Query plans, index usage, N+1 detection
+  - `schema-reviewer`: Normalization, constraints, indexes, migrations
+  - `orm-reviewer`: Prisma/TypeORM/SQLAlchemy patterns
+  - `migration-checker`: Backwards compatibility, rollback safety
+
+- **Debug Tools** (4 new commands):
+  - `/skill-test`: Test skill detection against sample input
+  - `/skill-log`: View skill activation history
+  - `/debug`: Toggle verbose debug mode
+  - `/validate-skill`: Validate custom skill definitions
+
+- **New Presets** (5 new):
+  - `python-web`: FastAPI/Django/Flask development
+  - `go-backend`: Gin/Echo/Fiber/Chi backend
+  - `rust-systems`: Actix-web/Axum systems
+  - `devops`: Docker/K8s/Terraform/CI-CD
+  - `full-stack`: Web + API + Database combined
+
+### Changed
+- **context-manager**: Updated to support 9 presets and 8 agent categories
+- **context-setup**: Enhanced detection for Python, Go, Rust, and DevOps projects
+- **All skills**: Standardized description format (WHEN/WHAT/WHEN NOT)
+- **Documentation**: Comprehensive README update with skill catalog
+
+### Compatibility
+- **Backward compatible** with v0.1.0
+- No breaking changes to existing hooks or configurations
+- Existing `.claude/` settings remain valid
+
+### Metrics
+- Skills: 13 → 31 (+18)
+- Commands: 3 → 7 (+4)
+- Presets: 4 → 9 (+5)
+- Languages: TypeScript/JavaScript, Kotlin → +Python, Go, Rust, SQL
+
 ## [0.1.0] - 2025-11-24
 
 ### Added
@@ -62,5 +121,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[0.2.0]: https://github.com/physics91/claude-vibe/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/physics91/claude-vibe/compare/v0.0.1...v0.1.0
 [0.0.1]: https://github.com/physics91/claude-vibe/releases/tag/v0.0.1
