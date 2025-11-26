@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Cross-platform wrapper for post-tool-use hook
+# Detects OS and runs appropriate script
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Detect OS and run appropriate script
+if [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]] || [[ "$OSTYPE" == "win32" ]]; then
+    # Windows - use PowerShell
+    powershell.exe -ExecutionPolicy Bypass -File "$SCRIPT_DIR/post-tool-use.ps1"
+else
+    # Unix-like (Linux, macOS) - use bash script
+    exec "$SCRIPT_DIR/post-tool-use.sh"
+fi
