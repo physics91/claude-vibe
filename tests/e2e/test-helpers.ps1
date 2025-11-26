@@ -77,8 +77,14 @@ function Invoke-HookWithPrompt {
 function Test-SkillActivation {
     param (
         [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
         [string]$Output
     )
+
+    # Return false for empty output (clear prompts)
+    if ([string]::IsNullOrWhiteSpace($Output)) {
+        return $false
+    }
 
     # Check if output contains skill activation marker
     return $Output -match "VIBE CODING ASSISTANT: PROMPT CLARIFICATION NEEDED" -and
