@@ -246,6 +246,132 @@ function Format-AgentsSummary {
 
 <#
 .SYNOPSIS
+    Formats AGENTS.md summary from project root for all sessions.
+
+.DESCRIPTION
+    Reads and merges AGENTS.md files from global, project, and local paths,
+    then formats a comprehensive summary for session injection.
+    This function is used for ALL sessions, not just post-compaction.
+
+.PARAMETER ProjectRoot
+    The project root directory to search for AGENTS.md files.
+
+.OUTPUTS
+    System.String
+    Comprehensive markdown summary of AGENTS.md guidelines.
+#>
+function Format-AgentsMdSummary {
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ProjectRoot
+    )
+
+    try {
+        # Get AGENTS.md files from all 3 layers
+        $agentsMdFiles = Get-AgentsMdFiles -ProjectRoot $ProjectRoot -IncludeLocal $true -LocalMaxDepth 3
+
+        if ($null -eq $agentsMdFiles) {
+            return ""
+        }
+
+        # Check if any AGENTS.md exists
+        $hasGlobal = $null -ne $agentsMdFiles.global
+        $hasProject = $null -ne $agentsMdFiles.project
+        $hasLocal = $agentsMdFiles.local -and $agentsMdFiles.local.Count -gt 0
+
+        if (-not $hasGlobal -and -not $hasProject -and -not $hasLocal) {
+            return ""
+        }
+
+        # Merge configs (Local > Project > Global priority)
+        $globalParsed = if ($hasGlobal) { $agentsMdFiles.global.parsed } else { $null }
+        $projectParsed = if ($hasProject) { $agentsMdFiles.project.parsed } else { $null }
+        $localParsed = if ($hasLocal) {
+            @($agentsMdFiles.local | ForEach-Object { $_.parsed } | Where-Object { $_ })
+        } else { @() }
+
+        $merged = Merge-AgentsMdConfigs -Global $globalParsed -Project $projectParsed -Local $localParsed
+
+        if ($null -eq $merged) {
+            return ""
+        }
+
+        $result = [System.Text.StringBuilder]::new()
+
+        # Header
+        [void]$result.AppendLine("## AGENTS.md Guidelines")
+        [void]$result.AppendLine("")
+
+        # Key instructions (IMPORTANT, MUST, ALWAYS, NEVER, etc.)
+        $keyInstructionsRaw = Get-SafeHashValue -Hash $merged -Keys @('key_instructions') -Default @()
+        $keyInstructions = @(@($keyInstructionsRaw) | Where-Object { $_ -and $_ -is [string] })
+        if ($keyInstructions.Count -gt 0) {
+            [void]$result.AppendLine("### Key Directives")
+            $topInstructions = $keyInstructions | Select-Object -First 15
+            foreach ($instruction in $topInstructions) {
+                $displayInstruction = if ($instruction.Length -gt 120) {
+                    $instruction.Substring(0, 117) + "..."
+                } else {
+                    $instruction
+                }
+                [void]$result.AppendLine("- $displayInstruction")
+            }
+            if ($keyInstructions.Count -gt 15) {
+                [void]$result.AppendLine("- ... and $($keyInstructions.Count - 15) more")
+            }
+            [void]$result.AppendLine("")
+        }
+
+        # Subagents
+        $subagentsRaw = Get-SafeHashValue -Hash $merged -Keys @('subagents') -Default @()
+        $subagents = @(@($subagentsRaw) | Where-Object { $_ -and ($_ -is [hashtable] -or $_ -is [PSCustomObject]) })
+        if ($subagents.Count -gt 0) {
+            [void]$result.AppendLine("### Available Subagents")
+            foreach ($subagent in $subagents) {
+                $name = Get-SafeHashValue -Hash $subagent -Keys @('name') -Default "unknown"
+                $trigger = Get-SafeHashValue -Hash $subagent -Keys @('trigger')
+                $triggerText = if ($trigger) { " (trigger: $trigger)" } else { "" }
+                [void]$result.AppendLine("- **$name**$triggerText")
+            }
+            [void]$result.AppendLine("")
+        }
+
+        # Sections summary (top-level sections only)
+        $sectionsRaw = Get-SafeHashValue -Hash $merged -Keys @('sections') -Default @()
+        $sections = @(@($sectionsRaw) | Where-Object { $_ -and ($_ -is [hashtable] -or $_ -is [PSCustomObject]) })
+        $topLevelSections = @($sections | Where-Object {
+            $level = Get-SafeHashValue -Hash $_ -Keys @('level') -Default 1
+            $level -le 2
+        })
+
+        if ($topLevelSections.Count -gt 0) {
+            [void]$result.AppendLine("### Document Structure")
+            foreach ($section in $topLevelSections) {
+                $heading = Get-SafeHashValue -Hash $section -Keys @('heading') -Default "Untitled"
+                $directivesRaw = Get-SafeHashValue -Hash $section -Keys @('directives') -Default @()
+                $directives = @(@($directivesRaw) | Where-Object { $_ -and $_ -is [string] })
+                $directiveCount = $directives.Count
+                if ($directiveCount -gt 0) {
+                    [void]$result.AppendLine("- **$heading** ($directiveCount items)")
+                } else {
+                    [void]$result.AppendLine("- **$heading**")
+                }
+            }
+            [void]$result.AppendLine("")
+        }
+
+        return $result.ToString().TrimEnd()
+    }
+    catch {
+        # Graceful degradation - return empty on error
+        return ""
+    }
+}
+
+<#
+.SYNOPSIS
     Formats complete context as markdown for session injection.
 
 .PARAMETER Context
@@ -728,11 +854,23 @@ try {
     $shouldLoad = Test-ShouldLoadContext -HookInput $hookInput
 
     if (-not $shouldLoad) {
-        # Not a compaction session - but still check for context profile
-        $profileInfo = Get-ContextProfileInfo -ProjectRoot $projectRoot
+        # Not a compaction session - but still inject AGENTS.md summary for all sessions
+        $output = @()
 
+        # AGENTS.md summary - always inject for every session
+        $agentsSummary = Format-AgentsMdSummary -ProjectRoot $projectRoot
+        if ($agentsSummary) {
+            $output += $agentsSummary
+        }
+
+        # Context profile info
+        $profileInfo = Get-ContextProfileInfo -ProjectRoot $projectRoot
         if ($profileInfo) {
-            Write-Output $profileInfo
+            $output += $profileInfo
+        }
+
+        if ($output.Count -gt 0) {
+            Write-Output ($output -join "`n`n")
         } else {
             Write-Output ""
         }
