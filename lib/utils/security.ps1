@@ -43,9 +43,15 @@ class SecurityViolationException : System.Exception {
 
 # Compiled regex patterns for performance
 $script:SensitivePatterns = @{
-    # API Keys - generic patterns
+    # API Keys - generic patterns (key=value style)
     ApiKey = [regex]::new(
         '(?i)(api[_-]?key|apikey)\s*[=:]\s*["\u0027]?([a-zA-Z0-9_\-]{16,})["\u0027]?',
+        [System.Text.RegularExpressions.RegexOptions]::Compiled
+    )
+
+    # API Keys - JSON style ("api_key": "value")
+    ApiKeyJson = [regex]::new(
+        '(?i)["'']?(api[_-]?key|apikey)["'']?\s*:\s*["'']([a-zA-Z0-9_\-]{16,})["'']',
         [System.Text.RegularExpressions.RegexOptions]::Compiled
     )
 
@@ -67,15 +73,39 @@ $script:SensitivePatterns = @{
         [System.Text.RegularExpressions.RegexOptions]::Compiled
     )
 
-    # Generic password patterns
+    # Generic password patterns (key=value style)
     Password = [regex]::new(
         '(?i)(password|passwd|pwd)\s*[=:]\s*["\u0027]?([^\s"\u0027]{4,})["\u0027]?',
         [System.Text.RegularExpressions.RegexOptions]::Compiled
     )
 
-    # Generic secret/token patterns
+    # Password - JSON style ("password": "value")
+    PasswordJson = [regex]::new(
+        '(?i)["'']?(password|passwd|pwd)["'']?\s*:\s*["'']([^"'']{4,})["'']',
+        [System.Text.RegularExpressions.RegexOptions]::Compiled
+    )
+
+    # Generic secret/token patterns (key=value style)
     Secret = [regex]::new(
         '(?i)(secret|token|auth[_-]?token|access[_-]?token|bearer)\s*[=:]\s*["\u0027]?([a-zA-Z0-9_\-\.]{8,})["\u0027]?',
+        [System.Text.RegularExpressions.RegexOptions]::Compiled
+    )
+
+    # Secret/Token - JSON style ("token": "value", "secret": "value")
+    SecretJson = [regex]::new(
+        '(?i)["'']?(secret|token|auth[_-]?token|access[_-]?token|client[_-]?secret|bearer)["'']?\s*:\s*["'']([a-zA-Z0-9_\-\.]{8,})["'']',
+        [System.Text.RegularExpressions.RegexOptions]::Compiled
+    )
+
+    # OpenAI API Key (sk-...)
+    OpenAIKey = [regex]::new(
+        'sk-[a-zA-Z0-9]{20,}T3BlbkFJ[a-zA-Z0-9]{20,}',
+        [System.Text.RegularExpressions.RegexOptions]::Compiled
+    )
+
+    # Anthropic API Key (sk-ant-...)
+    AnthropicKey = [regex]::new(
+        'sk-ant-[a-zA-Z0-9\-_]{80,}',
         [System.Text.RegularExpressions.RegexOptions]::Compiled
     )
 
@@ -124,6 +154,12 @@ $script:SensitivePatterns = @{
     # Azure connection strings
     AzureConnectionString = [regex]::new(
         '(?i)DefaultEndpointsProtocol=https?;AccountName=[^;]+;AccountKey=[^;]+',
+        [System.Text.RegularExpressions.RegexOptions]::Compiled
+    )
+
+    # Generic high-entropy secrets (32+ hex characters)
+    HighEntropySecret = [regex]::new(
+        '(?i)["'']?(secret|key|token|credential|auth)["'']?\s*:\s*["'']([a-f0-9]{32,})["'']',
         [System.Text.RegularExpressions.RegexOptions]::Compiled
     )
 }
@@ -273,14 +309,20 @@ function Remove-SensitiveData {
         $replacementMap = @{
             # Patterns with key=value structure - preserve key using $1 for first capture group
             'ApiKey' = '$1"[REDACTED:ApiKey]"'
+            'ApiKeyJson' = '$1: "[REDACTED:ApiKey]"'
             'AwsSecretKey' = '$1"[REDACTED:AwsSecretKey]"'
             'Password' = '$1"[REDACTED:Password]"'
+            'PasswordJson' = '$1: "[REDACTED:Password]"'
             'Secret' = '$1"[REDACTED:Secret]"'
+            'SecretJson' = '$1: "[REDACTED:Secret]"'
             'ConnectionStringWithCreds' = '$1"[REDACTED:ConnectionString]"'
+            'HighEntropySecret' = '$1: "[REDACTED:Secret]"'
 
             # Patterns that match standalone tokens - replace entire match
             'AwsAccessKey' = '[REDACTED:AwsAccessKey]'
             'GitHubToken' = '[REDACTED:GitHubToken]'
+            'OpenAIKey' = '[REDACTED:OpenAIKey]'
+            'AnthropicKey' = '[REDACTED:AnthropicKey]'
             'PrivateKey' = '[REDACTED:PrivateKey]'
             'ConnectionString' = '[REDACTED:ConnectionString]'
             'SlackToken' = '[REDACTED:SlackToken]'
@@ -594,6 +636,45 @@ function Set-SecureFilePermissions {
         throw [System.IO.FileNotFoundException]::new("Path not found: $Path")
     }
 
+    # Cross-platform detection
+    $isWindows = $true
+    if ($PSVersionTable.PSVersion.Major -ge 6) {
+        $isWindows = $IsWindows
+    } elseif ($env:OS -notmatch 'Windows') {
+        $isWindows = $false
+    }
+
+    # Non-Windows platforms: Use chmod-style permissions via bash
+    if (-not $isWindows) {
+        try {
+            $item = Get-Item -LiteralPath $Path -Force
+            $isDirectory = $item.PSIsContainer
+
+            # Set permissions: owner read/write (600 for files, 700 for directories)
+            $mode = if ($isDirectory) { '700' } else { '600' }
+
+            # Check if chmod is available
+            $chmodPath = Get-Command -Name 'chmod' -ErrorAction SilentlyContinue
+            if ($chmodPath) {
+                $result = & chmod $mode $Path 2>&1
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Verbose "chmod failed for '$Path': $result"
+                    # Non-fatal on Unix - best effort
+                }
+            } else {
+                Write-Verbose "chmod not available, skipping permission hardening for '$Path'"
+            }
+
+            Write-Verbose "Secure permissions set on (Unix): $Path (mode: $mode)"
+            return $true
+        } catch {
+            # Non-fatal error - graceful degradation
+            Write-Verbose "Failed to set Unix permissions on '$Path': $($_.Exception.Message)"
+            return $true  # Continue without blocking
+        }
+    }
+
+    # Windows-specific ACL handling
     try {
         $item = Get-Item -LiteralPath $Path -Force
         $isDirectory = $item.PSIsContainer

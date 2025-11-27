@@ -133,7 +133,7 @@ try {
     function Get-TranscriptContext {
         <#
         .SYNOPSIS
-            Extract context from transcript file.
+            Extract context from transcript file using memory-efficient streaming.
         #>
         param(
             [Parameter(Mandatory = $true)]
@@ -146,7 +146,10 @@ try {
             [int]$FileContextLimit = 20,
 
             [Parameter()]
-            [int]$ErrorContextLimit = 10
+            [int]$ErrorContextLimit = 10,
+
+            [Parameter()]
+            [int]$MaxFileSizeMB = 10  # Skip files larger than this to prevent OOM
         )
 
         $context = @{
@@ -163,82 +166,81 @@ try {
         }
 
         try {
-            $transcriptContent = Get-Content -LiteralPath $TranscriptPath -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
+            # Check file size first to avoid loading huge files
+            $fileInfo = Get-Item -LiteralPath $TranscriptPath
+            $fileSizeMB = $fileInfo.Length / 1MB
+
+            if ($fileSizeMB -gt $MaxFileSizeMB) {
+                # For very large transcripts, only read the last portion (tail approach)
+                Write-Verbose "Large transcript ($([math]::Round($fileSizeMB, 1))MB), reading last portion only"
+                $tailLines = 5000  # Read last 5000 lines for recent context
+                $transcriptContent = Get-Content -LiteralPath $TranscriptPath -Tail $tailLines -Encoding UTF8 -ErrorAction SilentlyContinue | Out-String
+            } else {
+                $transcriptContent = Get-Content -LiteralPath $TranscriptPath -Raw -Encoding UTF8 -ErrorAction SilentlyContinue
+            }
 
             if ([string]::IsNullOrEmpty($transcriptContent)) {
                 return $context
             }
 
-            # Extract objective from first user message
-            if ($transcriptContent -match '(?s)^\s*(?:user|human)\s*:\s*(.+?)(?=\n\s*(?:assistant|claude)\s*:|$)') {
-                $context.objective = $Matches[1].Trim().Substring(0, [Math]::Min(500, $Matches[1].Trim().Length))
-            }
+            # Pre-compile regex patterns for reuse (better performance)
+            $toolPattern = [regex]::new('(?i)(Read|Write|Edit|Glob|Grep|Bash)\s*\(\s*["\u0027]?([^"\u0027\)]+)["\u0027]?\s*\)', 'Compiled')
+            $filePattern = [regex]::new('(?i)(?:file|path)\s*[=:]\s*["\u0027]?([^\s"\u0027\n]+\.[a-zA-Z0-9]+)', 'Compiled')
+            $errorPattern = [regex]::new('(?i)(error|exception|failed|failure)[:\s]+([^\n]{10,200})', 'Compiled')
+            $decisionPattern = [regex]::new('(?i)(decided|choosing|selected|using|implementing|approach)\s+[:\s]*([^\n]{10,150})', 'Compiled')
+            $stepPattern = [regex]::new('(?i)(completed|done|finished|created|updated|implemented|added|fixed|configured)\s+([^\n]{5,100})', 'Compiled')
 
-            # Extract tool invocations
-            $toolMatches = [regex]::Matches($transcriptContent, '(?i)(Read|Write|Edit|Glob|Grep|Bash)\s*\(\s*["\u0027]?([^"\u0027\)]+)["\u0027]?\s*\)')
-            $toolHistory = [System.Collections.ArrayList]::new()
-
-            foreach ($match in $toolMatches) {
-                if ($toolHistory.Count -ge $ToolHistoryLimit) {
-                    break
+            # Extract objective from first user message (only if not using tail)
+            if ($fileSizeMB -le $MaxFileSizeMB) {
+                if ($transcriptContent -match '(?s)^\s*(?:user|human)\s*:\s*(.+?)(?=\n\s*(?:assistant|claude)\s*:|$)') {
+                    $context.objective = $Matches[1].Trim().Substring(0, [Math]::Min(500, $Matches[1].Trim().Length))
                 }
-                [void]$toolHistory.Add(@{
-                    tool = $match.Groups[1].Value
-                    target = $match.Groups[2].Value.Trim()
-                })
             }
-            $context.tool_history = $toolHistory.ToArray()
 
-            # Extract file paths mentioned
-            $fileMatches = [regex]::Matches($transcriptContent, '(?i)(?:file|path)\s*[=:]\s*["\u0027]?([^\s"\u0027\n]+\.[a-zA-Z0-9]+)')
+            # Helper function to efficiently extract matches with limit
+            function Get-LimitedMatches {
+                param($Pattern, $Content, $Limit, $Transform)
+                $results = [System.Collections.ArrayList]::new()
+                $match = $Pattern.Match($Content)
+                while ($match.Success -and $results.Count -lt $Limit) {
+                    [void]$results.Add((& $Transform $match))
+                    $match = $match.NextMatch()
+                }
+                return $results.ToArray()
+            }
+
+            # Extract tool invocations (with early termination)
+            $context.tool_history = Get-LimitedMatches -Pattern $toolPattern -Content $transcriptContent -Limit $ToolHistoryLimit -Transform {
+                param($m) @{ tool = $m.Groups[1].Value; target = $m.Groups[2].Value.Trim() }
+            }
+
+            # Extract file paths (use HashSet for deduplication)
             $workingFiles = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-
-            foreach ($match in $fileMatches) {
-                if ($workingFiles.Count -ge $FileContextLimit) {
-                    break
-                }
-                [void]$workingFiles.Add($match.Groups[1].Value)
+            $fileMatch = $filePattern.Match($transcriptContent)
+            while ($fileMatch.Success -and $workingFiles.Count -lt $FileContextLimit) {
+                [void]$workingFiles.Add($fileMatch.Groups[1].Value)
+                $fileMatch = $fileMatch.NextMatch()
             }
             $context.working_files = @($workingFiles)
 
-            # Extract error messages
-            $errorMatches = [regex]::Matches($transcriptContent, '(?i)(error|exception|failed|failure)[:\s]+([^\n]{10,200})')
-            $recentErrors = [System.Collections.ArrayList]::new()
-
-            foreach ($match in $errorMatches) {
-                if ($recentErrors.Count -ge $ErrorContextLimit) {
-                    break
-                }
-                [void]$recentErrors.Add(@{
-                    type = $match.Groups[1].Value
-                    message = $match.Groups[2].Value.Trim()
-                })
+            # Extract errors (limited)
+            $context.recent_errors = Get-LimitedMatches -Pattern $errorPattern -Content $transcriptContent -Limit $ErrorContextLimit -Transform {
+                param($m) @{ type = $m.Groups[1].Value; message = $m.Groups[2].Value.Trim() }
             }
-            $context.recent_errors = $recentErrors.ToArray()
 
-            # Extract decision indicators
-            $decisionMatches = [regex]::Matches($transcriptContent, '(?i)(decided|choosing|selected|using|implementing|approach)\s+[:\s]*([^\n]{10,150})')
-            $keyDecisions = [System.Collections.ArrayList]::new()
-
-            foreach ($match in $decisionMatches) {
-                if ($keyDecisions.Count -ge 10) {
-                    break
-                }
-                [void]$keyDecisions.Add($match.Groups[2].Value.Trim())
+            # Extract decisions (limited to 10)
+            $context.key_decisions = Get-LimitedMatches -Pattern $decisionPattern -Content $transcriptContent -Limit 10 -Transform {
+                param($m) $m.Groups[2].Value.Trim()
             }
-            $context.key_decisions = $keyDecisions.ToArray()
 
-            # Extract completed steps (based on common patterns)
-            $stepMatches = [regex]::Matches($transcriptContent, '(?i)(completed|done|finished|created|updated|implemented|added|fixed|configured)\s+([^\n]{5,100})')
-            $stepsCompleted = [System.Collections.ArrayList]::new()
-
-            foreach ($match in $stepMatches) {
-                if ($stepsCompleted.Count -ge 20) {
-                    break
-                }
-                [void]$stepsCompleted.Add("$($match.Groups[1].Value) $($match.Groups[2].Value.Trim())")
+            # Extract steps (limited to 20)
+            $context.steps_completed = Get-LimitedMatches -Pattern $stepPattern -Content $transcriptContent -Limit 20 -Transform {
+                param($m) "$($m.Groups[1].Value) $($m.Groups[2].Value.Trim())"
             }
-            $context.steps_completed = $stepsCompleted.ToArray()
+
+            # Clear content from memory as soon as possible
+            $transcriptContent = $null
+            [GC]::Collect()
 
             return $context
 

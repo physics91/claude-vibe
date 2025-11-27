@@ -194,10 +194,30 @@ function Write-CacheFile {
         }
 
         $json = $Cache | ConvertTo-Json -Depth 10 -Compress
-        $json | Set-Content -LiteralPath $cachePath -Encoding UTF8 -Force -ErrorAction Stop
 
-        Write-Verbose "Cache written with $($Cache.entries.Count) entries"
-        return $true
+        # Atomic write: write to temp file, then move to target (prevents corruption on interrupt)
+        $tempPath = "$cachePath.tmp.$([System.IO.Path]::GetRandomFileName())"
+
+        try {
+            # Write to temp file first
+            $json | Set-Content -LiteralPath $tempPath -Encoding UTF8 -Force -ErrorAction Stop
+
+            # Verify temp file was written correctly
+            if (-not (Test-Path -LiteralPath $tempPath -PathType Leaf)) {
+                throw "Temporary cache file was not created"
+            }
+
+            # Atomic move (replace existing file)
+            Move-Item -LiteralPath $tempPath -Destination $cachePath -Force -ErrorAction Stop
+
+            Write-Verbose "Cache written atomically with $($Cache.entries.Count) entries"
+            return $true
+        } finally {
+            # Clean up temp file if still exists (in case of error after temp write but before move)
+            if (Test-Path -LiteralPath $tempPath -PathType Leaf) {
+                Remove-Item -LiteralPath $tempPath -Force -ErrorAction SilentlyContinue
+            }
+        }
 
     } catch {
         Write-Warning "[CVIBE-203] Cache write failed: $($_.Exception.Message -replace '\r?\n', ' ')"
@@ -466,8 +486,33 @@ function Set-AgentsMdCache {
             $localHashes = @($FileHashes.local | Where-Object { $_ })
         }
 
+        # Security: Sanitize data before caching to prevent accidental secret persistence
+        $sanitizedData = $Data
+        try {
+            # Try to load security module and filter sensitive data
+            $securityPath = Join-Path (Split-Path $PSScriptRoot -Parent) "utils\security.ps1"
+            if (Test-Path -LiteralPath $securityPath -PathType Leaf) {
+                # Check if function already loaded
+                if (-not (Get-Command -Name 'Remove-SensitiveData' -ErrorAction SilentlyContinue)) {
+                    . $securityPath
+                }
+                # Deep-sanitize the data by converting to JSON, sanitizing, and back
+                $jsonData = $Data | ConvertTo-Json -Depth 10 -Compress
+                $sanitizedJson = Remove-SensitiveData -Content $jsonData
+                $parsedData = $sanitizedJson | ConvertFrom-Json
+                if ($null -ne $parsedData) {
+                    $sanitizedData = Convert-CacheDataToHashtable -CacheData $parsedData
+                }
+                Write-Verbose "Cache data sanitized before storage"
+            }
+        } catch {
+            # If sanitization fails, continue with original data but log warning
+            Write-Verbose "Cache data sanitization skipped: $($_.Exception.Message)"
+            $sanitizedData = $Data
+        }
+
         $cache.entries[$cacheKey] = @{
-            data = $Data
+            data = $sanitizedData
             hashes = @{
                 global = if ($FileHashes.global) { $FileHashes.global } else { "" }
                 project = if ($FileHashes.project) { $FileHashes.project } else { "" }
@@ -624,12 +669,18 @@ function Convert-CacheDataToHashtable {
     [CmdletBinding()]
     [OutputType([object])]  # Can return hashtable, array, or scalar
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
+        [AllowNull()]
         $CacheData,
 
         [Parameter()]
         [int]$Depth = 0
     )
+
+    # Handle null input gracefully
+    if ($null -eq $CacheData) {
+        return $null
+    }
 
     # Prevent excessive recursion (defensive limit)
     $MaxDepth = 50
