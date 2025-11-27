@@ -37,7 +37,9 @@ $libPath = Join-Path (Split-Path $scriptRoot -Parent) "lib"
 try {
     . "$libPath\core\parser.ps1"
     . "$libPath\core\storage.ps1"
+    . "$libPath\core\cache.ps1"
     . "$libPath\utils\security.ps1"
+    . "$libPath\utils\error-handler.ps1"
     . "$libPath\core\preset-manager.ps1"
     . "$libPath\core\project-detector.ps1"
     . "$libPath\core\mcp-config-generator.ps1"
@@ -266,7 +268,10 @@ function Format-AgentsMdSummary {
     param(
         [Parameter(Mandatory = $true)]
         [ValidateNotNullOrEmpty()]
-        [string]$ProjectRoot
+        [string]$ProjectRoot,
+
+        [Parameter()]
+        [switch]$SkipCache
     )
 
     # Configuration constants
@@ -279,33 +284,68 @@ function Format-AgentsMdSummary {
     $MaxHeadingLength = 60
 
     try {
-        # Get AGENTS.md files from all 3 layers with explicit error handling
-        $agentsMdFiles = Get-AgentsMdFiles -ProjectRoot $ProjectRoot -IncludeLocal $true -LocalMaxDepth 3 -ErrorAction Stop
+        $merged = $null
 
-        if ($null -eq $agentsMdFiles) {
-            return ""
+        # Try to get from cache first (unless SkipCache is specified)
+        if (-not $SkipCache) {
+            try {
+                $fileHashes = Get-FileHashesForCache -ProjectRoot $ProjectRoot -ErrorAction Stop
+                $cached = Get-AgentsMdCache -ProjectRoot $ProjectRoot -FileHashes $fileHashes -ErrorAction SilentlyContinue
+
+                if ($null -ne $cached) {
+                    Write-Verbose "Using cached AGENTS.md data"
+                    $merged = $cached
+                }
+            } catch {
+                Write-Verbose "Cache check failed, falling back to file read: $($_.Exception.Message)"
+            }
         }
 
-        # Check if any AGENTS.md exists
-        $hasGlobal = $null -ne $agentsMdFiles.global
-        $hasProject = $null -ne $agentsMdFiles.project
-        $hasLocal = $agentsMdFiles.local -and $agentsMdFiles.local.Count -gt 0
-
-        if (-not $hasGlobal -and -not $hasProject -and -not $hasLocal) {
-            return ""
-        }
-
-        # Merge configs (Local > Project > Global priority)
-        $globalParsed = if ($hasGlobal) { $agentsMdFiles.global.parsed } else { $null }
-        $projectParsed = if ($hasProject) { $agentsMdFiles.project.parsed } else { $null }
-        $localParsed = if ($hasLocal) {
-            @($agentsMdFiles.local | ForEach-Object { $_.parsed } | Where-Object { $_ })
-        } else { @() }
-
-        $merged = Merge-AgentsMdConfigs -Global $globalParsed -Project $projectParsed -Local $localParsed -ErrorAction Stop
-
+        # If not cached, read and parse files
         if ($null -eq $merged) {
-            return ""
+            # Get AGENTS.md files from all 3 layers with explicit error handling
+            $agentsMdFiles = Get-AgentsMdFiles -ProjectRoot $ProjectRoot -IncludeLocal $true -LocalMaxDepth 3 -ErrorAction Stop
+
+            if ($null -eq $agentsMdFiles) {
+                return ""
+            }
+
+            # Check if any AGENTS.md exists
+            $hasGlobal = $null -ne $agentsMdFiles.global
+            $hasProject = $null -ne $agentsMdFiles.project
+            $hasLocal = $agentsMdFiles.local -and $agentsMdFiles.local.Count -gt 0
+
+            if (-not $hasGlobal -and -not $hasProject -and -not $hasLocal) {
+                return ""
+            }
+
+            # Merge configs (Local > Project > Global priority)
+            $globalParsed = if ($hasGlobal) { $agentsMdFiles.global.parsed } else { $null }
+            $projectParsed = if ($hasProject) { $agentsMdFiles.project.parsed } else { $null }
+            $localParsed = if ($hasLocal) {
+                @($agentsMdFiles.local | ForEach-Object { $_.parsed } | Where-Object { $_ })
+            } else { @() }
+
+            $merged = Merge-AgentsMdConfigs -Global $globalParsed -Project $projectParsed -Local $localParsed -ErrorAction Stop
+
+            if ($null -eq $merged) {
+                return ""
+            }
+
+            # Cache the merged result for future use
+            if (-not $SkipCache) {
+                try {
+                    $cacheHashes = @{
+                        global = if ($hasGlobal) { $agentsMdFiles.global.hash } else { "" }
+                        project = if ($hasProject) { $agentsMdFiles.project.hash } else { "" }
+                        local = @($agentsMdFiles.local | ForEach-Object { $_.hash } | Where-Object { $_ })
+                    }
+                    $null = Set-AgentsMdCache -ProjectRoot $ProjectRoot -Data $merged -FileHashes $cacheHashes -ErrorAction SilentlyContinue
+                    Write-Verbose "Cached AGENTS.md data"
+                } catch {
+                    Write-Verbose "Cache storage failed: $($_.Exception.Message)"
+                }
+            }
         }
 
         # Pre-compute content to check if we have anything to display
