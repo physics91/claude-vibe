@@ -44,6 +44,38 @@ All file I/O operations use:
 - `Set-StrictMode -Version Latest` for undefined variable detection
 - `$ErrorActionPreference = 'Stop'` for proper error propagation
 
+#### Sensitive Data Detection (v0.4.1+)
+
+Automatic detection and redaction of secrets in cached/stored data:
+
+| Pattern Type | Examples |
+|-------------|----------|
+| API Keys | `api_key=...`, `"api_key": "..."` (JSON) |
+| AWS Keys | `AKIA...`, `aws_secret_access_key=...` |
+| OpenAI Keys | `sk-...T3BlbkFJ...` |
+| Anthropic Keys | `sk-ant-...` |
+| GitHub Tokens | `ghp_...`, `gho_...`, `ghu_...` |
+| JWT Tokens | `eyJ...` (base64 segments) |
+| Stripe Keys | `sk_live_...`, `pk_test_...` |
+| Connection Strings | `mongodb://`, `postgres://` with credentials |
+| High-Entropy Secrets | 32+ hex chars in JSON values |
+
+#### Cross-Platform Permission Hardening (v0.4.1+)
+
+- **Windows**: ACL-based permissions (current user + SYSTEM only)
+- **Unix/Linux/macOS**: `chmod 600` for files, `chmod 700` for directories
+- Graceful degradation: continues without blocking if permission changes fail
+
+#### Atomic File Writes (v0.4.1+)
+
+Cache and context files use atomic write pattern:
+1. Write to temporary file with random suffix
+2. Verify temp file integrity
+3. Atomic move/replace to target path
+4. Cleanup temp file on failure
+
+This prevents data corruption from interrupted writes or concurrent access
+
 ## Reporting a Vulnerability
 
 If you discover a security vulnerability, please:

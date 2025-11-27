@@ -5,6 +5,45 @@ All notable changes to the Claude Vibe plugin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2025-11-27
+
+### Security Improvements (AI Code Review)
+- **Cross-platform ACL handling**: Unix/Linux support via `chmod 600/700`, graceful degradation
+- **JSON-style secret detection**: 6 new patterns for `"api_key": "..."` format
+- **OpenAI/Anthropic key patterns**: Detects `sk-...T3BlbkFJ...` and `sk-ant-...` formats
+- **High-entropy secret detection**: 32+ hex characters in JSON values
+- **Cache data sanitization**: Automatic redaction via `Remove-SensitiveData` before disk write
+
+### Performance Improvements
+- **Transcript memory optimization**: File size check with `MaxFileSizeMB` parameter
+- **Large file handling**: Tail-based reading for transcripts >10MB (last 5000 lines)
+- **Pre-compiled regex patterns**: Reusable patterns for better performance
+- **Early termination**: `Match.NextMatch()` iteration with limits
+
+### Reliability Improvements
+- **Atomic cache writes**: Temp file + move pattern prevents corruption
+- **Null handling**: `Convert-CacheDataToHashtable` gracefully handles null input
+- **Cross-platform graceful degradation**: Continues without blocking on permission errors
+
+### Tests
+- New `tests/test-security-patterns.ps1` for secret detection validation
+- All E2E and unit tests passing (100% success rate)
+
+---
+
+## [0.4.0] - 2025-11-27
+
+### Added
+- **AGENTS.md Caching**: File hash-based cache with TTL support
+- **Error Handling Framework**: Centralized exceptions and error codes (CVIBE-xxx)
+- **API Documentation**: `docs/api/` for parser, cache, error-handler modules
+
+### Changed
+- Refactored parser.ps1 with improved error handling
+- Added comprehensive inline documentation
+
+---
+
 ## [0.3.0] - 2025-11-26
 
 ### Added
@@ -179,6 +218,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[0.4.1]: https://github.com/physics91/claude-vibe/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/physics91/claude-vibe/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/physics91/claude-vibe/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/physics91/claude-vibe/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/physics91/claude-vibe/compare/v0.0.1...v0.1.0

@@ -76,6 +76,10 @@ Set-AgentsMdCache -ProjectRoot <string> -Data <hashtable> -FileHashes <hashtable
 
 **Returns:** `bool` - 성공 여부
 
+**Security (v0.4.1+):**
+- 데이터는 저장 전 `Remove-SensitiveData`를 통해 자동 sanitization됨
+- API 키, 토큰, 비밀번호 등이 자동으로 `[REDACTED]`로 치환됨
+
 **Example:**
 ```powershell
 $success = Set-AgentsMdCache `
@@ -199,6 +203,23 @@ function Get-MergedAgentsConfig {
 }
 ```
 
+## Atomic Writes (v0.4.1+)
+
+캐시 파일은 원자적 쓰기 패턴을 사용하여 데이터 손상을 방지합니다:
+
+```
+1. 임시 파일에 쓰기 (cache.json.tmp.randomsuffix)
+2. 임시 파일 무결성 검증
+3. 원자적 이동 (Move-Item)으로 대상 파일 교체
+4. 실패 시 임시 파일 정리
+```
+
+이를 통해 다음을 방지합니다:
+- 쓰기 중단으로 인한 손상
+- 동시 접근으로 인한 데이터 손실
+- 부분 쓰기 상태
+
 ## Dependencies
 
 - `lib/core/parser.ps1` - Get-AgentsMdHash 함수 사용
+- `lib/utils/security.ps1` - Remove-SensitiveData 함수 사용 (v0.4.1+)
