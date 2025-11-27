@@ -265,12 +265,22 @@ function Format-AgentsMdSummary {
     [OutputType([string])]
     param(
         [Parameter(Mandatory = $true)]
+        [ValidateNotNullOrEmpty()]
         [string]$ProjectRoot
     )
 
+    # Configuration constants
+    $MaxInstructionLength = 120
+    $MaxInstructionWordBoundary = 80
+    $MaxInstructions = 15
+    $MaxSubagents = 20
+    $MaxSections = 20
+    $MaxNameLength = 50
+    $MaxHeadingLength = 60
+
     try {
-        # Get AGENTS.md files from all 3 layers
-        $agentsMdFiles = Get-AgentsMdFiles -ProjectRoot $ProjectRoot -IncludeLocal $true -LocalMaxDepth 3
+        # Get AGENTS.md files from all 3 layers with explicit error handling
+        $agentsMdFiles = Get-AgentsMdFiles -ProjectRoot $ProjectRoot -IncludeLocal $true -LocalMaxDepth 3 -ErrorAction Stop
 
         if ($null -eq $agentsMdFiles) {
             return ""
@@ -292,66 +302,102 @@ function Format-AgentsMdSummary {
             @($agentsMdFiles.local | ForEach-Object { $_.parsed } | Where-Object { $_ })
         } else { @() }
 
-        $merged = Merge-AgentsMdConfigs -Global $globalParsed -Project $projectParsed -Local $localParsed
+        $merged = Merge-AgentsMdConfigs -Global $globalParsed -Project $projectParsed -Local $localParsed -ErrorAction Stop
 
         if ($null -eq $merged) {
             return ""
         }
 
+        # Pre-compute content to check if we have anything to display
+        $keyInstructionsRaw = Get-SafeHashValue -Hash $merged -Keys @('key_instructions') -Default @()
+        $keyInstructions = @($keyInstructionsRaw | Where-Object { $_ -and $_ -is [string] })
+
+        $subagentsRaw = Get-SafeHashValue -Hash $merged -Keys @('subagents') -Default @()
+        $subagents = @($subagentsRaw | Where-Object { $_ -and ($_ -is [hashtable] -or $_ -is [PSCustomObject]) })
+
+        $sectionsRaw = Get-SafeHashValue -Hash $merged -Keys @('sections') -Default @()
+        $sections = @($sectionsRaw | Where-Object { $_ -and ($_ -is [hashtable] -or $_ -is [PSCustomObject]) })
+        $topLevelSections = @($sections | Where-Object {
+            $levelRaw = Get-SafeHashValue -Hash $_ -Keys @('level') -Default 1
+            # Explicitly handle $null to avoid coercion to 0
+            $level = if ($null -eq $levelRaw) { 1 } else { try { [int]$levelRaw } catch { 1 } }
+            $level -le 2
+        })
+
+        # Only emit header if we have content
+        $hasContent = $keyInstructions.Count -gt 0 -or $subagents.Count -gt 0 -or $topLevelSections.Count -gt 0
+        if (-not $hasContent) {
+            return ""
+        }
+
         $result = [System.Text.StringBuilder]::new()
 
-        # Header
+        # Header - only when we have content
         [void]$result.AppendLine("## AGENTS.md Guidelines")
         [void]$result.AppendLine("")
 
         # Key instructions (IMPORTANT, MUST, ALWAYS, NEVER, etc.)
-        $keyInstructionsRaw = Get-SafeHashValue -Hash $merged -Keys @('key_instructions') -Default @()
-        $keyInstructions = @(@($keyInstructionsRaw) | Where-Object { $_ -and $_ -is [string] })
         if ($keyInstructions.Count -gt 0) {
             [void]$result.AppendLine("### Key Directives")
-            $topInstructions = $keyInstructions | Select-Object -First 15
+            $topInstructions = $keyInstructions | Select-Object -First $MaxInstructions
             foreach ($instruction in $topInstructions) {
-                $displayInstruction = if ($instruction.Length -gt 120) {
-                    $instruction.Substring(0, 117) + "..."
+                # Sanitize newlines to prevent markdown format breaking
+                $cleanInstruction = $instruction -replace '\r?\n', ' '
+                # Truncate at word boundary when possible
+                $displayInstruction = if ($cleanInstruction.Length -gt $MaxInstructionLength) {
+                    $truncated = $cleanInstruction.Substring(0, $MaxInstructionLength - 3)
+                    $lastSpace = $truncated.LastIndexOf(' ')
+                    if ($lastSpace -gt $MaxInstructionWordBoundary) {
+                        $truncated.Substring(0, $lastSpace) + "..."
+                    } else {
+                        $truncated + "..."
+                    }
                 } else {
-                    $instruction
+                    $cleanInstruction
                 }
                 [void]$result.AppendLine("- $displayInstruction")
             }
-            if ($keyInstructions.Count -gt 15) {
-                [void]$result.AppendLine("- ... and $($keyInstructions.Count - 15) more")
+            if ($keyInstructions.Count -gt $MaxInstructions) {
+                [void]$result.AppendLine("- ... and $($keyInstructions.Count - $MaxInstructions) more")
             }
             [void]$result.AppendLine("")
         }
 
-        # Subagents
-        $subagentsRaw = Get-SafeHashValue -Hash $merged -Keys @('subagents') -Default @()
-        $subagents = @(@($subagentsRaw) | Where-Object { $_ -and ($_ -is [hashtable] -or $_ -is [PSCustomObject]) })
+        # Subagents (capped)
         if ($subagents.Count -gt 0) {
             [void]$result.AppendLine("### Available Subagents")
-            foreach ($subagent in $subagents) {
+            $displaySubagents = $subagents | Select-Object -First $MaxSubagents
+            foreach ($subagent in $displaySubagents) {
                 $name = Get-SafeHashValue -Hash $subagent -Keys @('name') -Default "unknown"
+                # Sanitize name: remove newlines and limit length
+                $name = ($name -replace '\r?\n', ' ').Trim()
+                if ($name.Length -gt $MaxNameLength) { $name = $name.Substring(0, $MaxNameLength - 3) + "..." }
                 $trigger = Get-SafeHashValue -Hash $subagent -Keys @('trigger')
+                # Sanitize trigger: remove newlines and limit length
+                if ($trigger) {
+                    $trigger = ($trigger -replace '\r?\n', ' ').Trim()
+                    if ($trigger.Length -gt $MaxNameLength) { $trigger = $trigger.Substring(0, $MaxNameLength - 3) + "..." }
+                }
                 $triggerText = if ($trigger) { " (trigger: $trigger)" } else { "" }
                 [void]$result.AppendLine("- **$name**$triggerText")
             }
+            if ($subagents.Count -gt $MaxSubagents) {
+                [void]$result.AppendLine("- ... and $($subagents.Count - $MaxSubagents) more")
+            }
             [void]$result.AppendLine("")
         }
 
-        # Sections summary (top-level sections only)
-        $sectionsRaw = Get-SafeHashValue -Hash $merged -Keys @('sections') -Default @()
-        $sections = @(@($sectionsRaw) | Where-Object { $_ -and ($_ -is [hashtable] -or $_ -is [PSCustomObject]) })
-        $topLevelSections = @($sections | Where-Object {
-            $level = Get-SafeHashValue -Hash $_ -Keys @('level') -Default 1
-            $level -le 2
-        })
-
+        # Sections summary (top-level sections only, capped)
         if ($topLevelSections.Count -gt 0) {
             [void]$result.AppendLine("### Document Structure")
-            foreach ($section in $topLevelSections) {
+            $displaySections = $topLevelSections | Select-Object -First $MaxSections
+            foreach ($section in $displaySections) {
                 $heading = Get-SafeHashValue -Hash $section -Keys @('heading') -Default "Untitled"
+                # Sanitize heading: remove newlines and limit length
+                $heading = ($heading -replace '\r?\n', ' ').Trim()
+                if ($heading.Length -gt $MaxHeadingLength) { $heading = $heading.Substring(0, $MaxHeadingLength - 3) + "..." }
                 $directivesRaw = Get-SafeHashValue -Hash $section -Keys @('directives') -Default @()
-                $directives = @(@($directivesRaw) | Where-Object { $_ -and $_ -is [string] })
+                $directives = @($directivesRaw | Where-Object { $_ -and $_ -is [string] })
                 $directiveCount = $directives.Count
                 if ($directiveCount -gt 0) {
                     [void]$result.AppendLine("- **$heading** ($directiveCount items)")
@@ -359,13 +405,25 @@ function Format-AgentsMdSummary {
                     [void]$result.AppendLine("- **$heading**")
                 }
             }
+            if ($topLevelSections.Count -gt $MaxSections) {
+                [void]$result.AppendLine("- ... and $($topLevelSections.Count - $MaxSections) more")
+            }
             [void]$result.AppendLine("")
         }
 
         return $result.ToString().TrimEnd()
     }
     catch {
-        # Graceful degradation - return empty on error
+        # Graceful degradation - log detailed error for debugging, return empty string
+        # Sanitize error message to remove newlines for clean log output
+        $errorMsg = ($_.Exception.Message -replace '\r?\n', ' ').Trim()
+        $errorDetails = @(
+            "Format-AgentsMdSummary failed",
+            "ProjectRoot: $ProjectRoot",
+            "Error: $errorMsg",
+            "Type: $($_.Exception.GetType().FullName)"
+        ) -join " | "
+        Write-Warning $errorDetails
         return ""
     }
 }
@@ -855,18 +913,18 @@ try {
 
     if (-not $shouldLoad) {
         # Not a compaction session - but still inject AGENTS.md summary for all sessions
-        $output = @()
+        $output = [System.Collections.Generic.List[string]]::new()
 
         # AGENTS.md summary - always inject for every session
         $agentsSummary = Format-AgentsMdSummary -ProjectRoot $projectRoot
         if ($agentsSummary) {
-            $output += $agentsSummary
+            $output.Add($agentsSummary)
         }
 
         # Context profile info
         $profileInfo = Get-ContextProfileInfo -ProjectRoot $projectRoot
         if ($profileInfo) {
-            $output += $profileInfo
+            $output.Add($profileInfo)
         }
 
         if ($output.Count -gt 0) {
