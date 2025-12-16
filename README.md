@@ -49,7 +49,7 @@ You: "Review my FastAPI code"
 
 ## Features
 
-### 1. Intelligent Code Review (31 Skills)
+### 1. Intelligent Code Review (34 Skills)
 
 Automated code review for multiple languages and frameworks:
 
@@ -59,6 +59,8 @@ Automated code review for multiple languages and frameworks:
 | **Python** | python-reviewer, fastapi-reviewer, django-reviewer, flask-reviewer, python-data-reviewer | PEP8, async, ORM, data processing |
 | **Go/Rust** | go-reviewer, go-api-reviewer, rust-reviewer, rust-api-reviewer | Goroutines, ownership, API patterns |
 | **Kotlin** | kotlin-android-reviewer, kotlin-spring-reviewer, kotlin-multiplatform-reviewer | Android, Spring Boot, KMP |
+| **Mobile** | ios-reviewer, flutter-reviewer | Swift/SwiftUI, Flutter/Dart (v2.0) |
+| **ML/AI** | ml-reviewer | PyTorch, TensorFlow, scikit-learn (v2.0) |
 | **DevOps** | docker-reviewer, k8s-reviewer, terraform-reviewer, ci-cd-reviewer, infra-security-reviewer | Containers, IaC, CI/CD, security |
 | **Database** | sql-optimizer, schema-reviewer, orm-reviewer, migration-checker | Query optimization, schema design |
 | **Core** | prompt-clarifier, context-manager | Context optimization |
@@ -144,6 +146,32 @@ Cross-session intelligence with project-specific memory:
 - Stores file insights and learned patterns
 - Persists across sessions in `~/.claude/claude-vibe/memory/`
 
+### 8. Safety Guard (v2.0.0)
+
+PreToolUse hook for dangerous operation prevention:
+
+- Blocks dangerous Bash commands (rm -rf, force push, chmod 777)
+- Protects sensitive files (.env, SSH keys, credentials)
+- Pattern-based validation with severity levels
+- Configurable rules via `config/safety-rules.json`
+
+### 9. Quality Gate (v2.0.0)
+
+Stop hook for session quality verification:
+
+- Checks for failing tests before session end
+- Warns about uncommitted git changes
+- Reports pending todos
+
+### 10. Notifications (v2.0.0)
+
+Multi-channel notification support:
+
+- ntfy.sh webhook integration
+- Slack webhook integration
+- Desktop notifications (cross-platform)
+- Sub-agent notification suppression
+
 ## Commands
 
 ### Standard Commands
@@ -177,34 +205,37 @@ Cross-session intelligence with project-specific memory:
 
 ```
 claude-vibe/
-├── hooks/                  # Hook scripts (4 hooks)
-│   ├── session-start.ps1   # Context restoration
-│   ├── pre-compact.ps1     # Context saving
-│   ├── user-prompt-submit.ps1  # Prompt analysis
-│   └── post-tool-use.ps1   # Pattern learning (v0.3.0)
-├── skills/                 # 31 review skills
+├── hooks/                  # Hook scripts (8 hooks, Node.js)
+│   ├── lib/                # Core library (v2.0)
+│   │   ├── core/           # Core modules
+│   │   │   ├── stdin-reader.js
+│   │   │   ├── output-formatter.js
+│   │   │   ├── constants.js
+│   │   │   └── logger.js
+│   │   └── utils/          # Utility modules
+│   │       ├── security.js
+│   │       ├── http-client.js
+│   │       └── validation.js
+│   ├── session-start.js    # AGENTS.md re-injection
+│   ├── pre-compact.js      # Session state saving
+│   ├── user-prompt-submit.js  # Prompt analysis
+│   ├── post-tool-use.js    # Pattern learning
+│   ├── pre-tool-use-safety.js  # Safety guard (v2.0)
+│   ├── stop-quality-gate.js    # Quality gate (v2.0)
+│   ├── status-line.js      # Status line (v2.0)
+│   └── notification-handler.js  # Notifications (v2.0)
+├── skills/                 # 34 review skills
 │   ├── code-reviewer/      # General code review
 │   ├── python-reviewer/    # Python review
-│   ├── go-reviewer/        # Go review
-│   ├── rust-reviewer/      # Rust review
-│   ├── docker-reviewer/    # Dockerfile review
-│   ├── sql-optimizer/      # SQL optimization
+│   ├── ios-reviewer/       # iOS/Swift review (v2.0)
+│   ├── flutter-reviewer/   # Flutter/Dart review (v2.0)
+│   ├── ml-reviewer/        # ML/DL review (v2.0)
 │   └── ...                 # Additional skills
 ├── commands/               # 17 slash commands (7 + 10 express)
 ├── presets/                # 9 context presets
-├── lib/core/               # Core modules
-│   ├── parser.ps1
-│   ├── storage.ps1
-│   ├── prompt-analyzer.ps1
-│   ├── preset-manager.ps1
-│   ├── project-detector.ps1
-│   ├── mcp-config-generator.ps1
-│   ├── command-manager.ps1
-│   ├── pattern-analyzer.ps1       # v0.3.0
-│   ├── session-memory.ps1         # v0.3.0
-│   ├── skill-suggester.ps1        # v0.3.0
-│   └── project-profile-manager.ps1 # v0.3.0
 └── tests/                  # Test scripts
+    ├── hooks.test.js       # Hook unit tests (v2.0)
+    └── e2e-test.js         # E2E tests
 ```
 
 ## Skill Categories
@@ -237,6 +268,13 @@ claude-vibe/
 - **kotlin-spring-reviewer**: Spring Boot, coroutines
 - **kotlin-multiplatform-reviewer**: KMP shared code
 
+### Mobile (v2.0)
+- **ios-reviewer**: Swift/SwiftUI/UIKit patterns, Combine, async/await
+- **flutter-reviewer**: Widget optimization, BLoC/Provider/Riverpod
+
+### ML/AI (v2.0)
+- **ml-reviewer**: PyTorch/TensorFlow patterns, training optimization, MLOps
+
 ### DevOps
 - **docker-reviewer**: Multi-stage builds, layer optimization
 - **k8s-reviewer**: Resource limits, probes, RBAC
@@ -253,19 +291,20 @@ claude-vibe/
 ## Requirements
 
 - Claude Code v1.0.0+
-- PowerShell 5.1+ (Windows) / Bash 4.0+ (Linux/macOS)
-- Python 2.7+ or 3.x
+- Node.js 16+ (LTS recommended)
+- (Optional) PowerShell 5.1+ for legacy scripts
 
 ## Testing
 
-```powershell
-# Unit tests
-.\tests\test-prompt-analyzer.ps1
-.\tests\test-command-manager.ps1
+```bash
+# Run all hook tests (v2.0)
+node tests/hooks.test.js
 
-# E2E tests
-.\tests\test-e2e-scenarios.ps1
-.\tests\e2e\run-e2e-tests.ps1
+# Run E2E tests
+node tests/e2e-test.js
+
+# Legacy PowerShell tests
+.\tests\test-prompt-analyzer.ps1
 ```
 
 ## Updating

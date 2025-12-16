@@ -5,6 +5,153 @@ All notable changes to the Claude Vibe plugin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-12-16
+
+### New Skills (4 new)
+- **typescript-reviewer**: TypeScript type safety and best practices
+  - `any` abuse detection (explicit, implicit, `as any`)
+  - `@ts-ignore`/`@ts-nocheck` suppression detection
+  - Type assertion safety checks
+  - tsconfig.json analysis (strict mode, compiler options)
+  - External data validation requirements
+  - Generic constraint patterns
+  - AI-reviewed and enhanced with Codex/Gemini feedback
+
+- **java-reviewer**: Java idioms and modern features
+  - Exception handling patterns (empty catch, Throwable)
+  - Resource management (try-with-resources)
+  - Mutable static fields detection
+  - Raw types and generics usage
+  - Stream anti-patterns
+  - Modern Java 17+ feature adoption (records, pattern matching)
+
+- **spring-boot-reviewer**: Spring Boot patterns and security
+  - Field injection vs constructor injection
+  - N+1 query detection and DataLoader patterns
+  - `@Transactional` management and self-invocation issues
+  - Security configuration (Actuator exposure, @PreAuthorize)
+  - DTO validation and entity exposure
+  - WebFlux blocking call detection
+  - AI-reviewed with Gemini feedback on proxy pitfalls
+
+- **graphql-reviewer**: GraphQL schema and resolver patterns
+  - N+1 detection and DataLoader usage
+  - Query complexity and depth limits
+  - Input validation requirements
+  - Pagination patterns (Relay connections)
+  - Error handling best practices
+  - Security (rate limiting, introspection)
+
+### Testing Improvements
+- **Core Library Unit Tests**: 0% → 80%+ coverage
+  - `validation.js`: 38 tests (all pure functions)
+  - `output-formatter.js`: 21 tests (output formatting)
+  - `logger.js`: 10 tests (structured logging)
+  - `http-client.js`: 35 tests (with mock HTTP server)
+- **Total Tests**: 32 → 146 (+114 tests)
+- **Mock Server Infrastructure**: Local HTTP server for webhook testing
+
+### AI-Assisted Development
+- Codex and Gemini MCP tools used for skill review
+- Identified and fixed 15+ issues in TypeScript skill
+- Added 6 missing patterns based on AI feedback
+- Enhanced severity classifications
+
+### Metrics
+- Skills: 34 → 38 (+4: typescript, java, spring-boot, graphql)
+- Tests: 32 → 146 (+114)
+- Core library coverage: 0% → 80%+
+
+---
+
+## [2.0.0] - 2025-12-16
+
+### Major Changes
+
+#### Node.js Migration
+- **Complete Hook Rewrite**: All hooks migrated from PowerShell/Bash to Node.js
+- **Unified Core Library**: New `hooks/lib/core/` with shared modules
+- **Cross-platform Support**: Native Node.js runs on Windows/macOS/Linux without shell dependencies
+
+#### New Core Library (`hooks/lib/`)
+- `stdin-reader.js`: Unified stdin JSON parsing
+- `output-formatter.js`: Hook output formatting (context, permission, stop, notification)
+- `constants.js`: Centralized configuration (limits, patterns, timeouts)
+- `logger.js`: Structured logging with file output support
+- `security.js`: Security validation (dangerous commands, protected files)
+- `http-client.js`: HTTP client for webhooks (ntfy, Slack)
+- `validation.js`: Input validation utilities
+
+#### New Hooks
+- **PreToolUse Safety Guard** (`pre-tool-use-safety.js`):
+  - Blocks dangerous Bash commands (rm -rf, force push, chmod 777)
+  - Protects sensitive files (.env, SSH keys, credentials)
+  - Pattern-based validation with severity levels
+
+- **Stop Quality Gate** (`stop-quality-gate.js`):
+  - Checks for failing tests before session end
+  - Warns about uncommitted git changes
+  - Reports pending todos
+
+- **StatusLine Custom** (`status-line.js`):
+  - Token usage estimation display
+  - Tool usage tracking
+  - Session duration monitoring
+
+- **Notification Handler** (`notification-handler.js`):
+  - ntfy.sh webhook support
+  - Slack webhook support
+  - Desktop notifications (cross-platform)
+  - Sub-agent notification suppression
+
+#### New Skills (3 new)
+- **ios-reviewer**: Swift/SwiftUI/UIKit code review
+  - SwiftUI patterns (State, StateObject, ObservedObject)
+  - Combine/async-await best practices
+  - Memory management and retain cycles
+  - UIKit lifecycle patterns
+
+- **flutter-reviewer**: Flutter/Dart code review
+  - Widget build optimization
+  - BLoC/Provider/Riverpod patterns
+  - Platform channel best practices
+  - Performance optimization
+
+- **ml-reviewer**: Machine Learning/Deep Learning code review
+  - PyTorch/TensorFlow patterns
+  - Training loop optimization
+  - Data pipeline checks (leakage detection)
+  - MLOps patterns (experiment tracking, reproducibility)
+
+### Migrated Hooks
+- `session-start.js`: AGENTS.md re-injection (from inject-agents.js)
+- `pre-compact.js`: Session state saving
+- `user-prompt-submit.js`: Prompt ambiguity analysis
+- `post-tool-use.js`: Pattern learning and optimization suggestions
+
+### Testing
+- New unified test suite: `tests/hooks.test.js`
+- 32 tests covering all hooks and utilities
+- Security validation tests
+- Cross-platform compatibility tests
+
+### Metrics
+- Skills: 31 → 34 (+3: ios-reviewer, flutter-reviewer, ml-reviewer)
+- Hooks: 4 → 8 (+4: PreToolUse, Stop, StatusLine, Notification)
+- Core modules: PowerShell → Node.js (complete migration)
+- Test coverage: 32 unit tests
+
+### Breaking Changes
+- Hooks now require Node.js instead of PowerShell
+- Hook JSON output format standardized (see `output-formatter.js`)
+
+### Compatibility
+- Requires Node.js 16+ (LTS recommended)
+- Claude Code v1.0.0+
+- All existing skills and commands remain compatible
+
+---
+
 ## [0.4.1] - 2025-11-27
 
 ### Security Improvements (AI Code Review)
@@ -218,6 +365,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[2.1.0]: https://github.com/physics91/claude-vibe/compare/v2.0.0...v2.1.0
+[2.0.0]: https://github.com/physics91/claude-vibe/compare/v0.4.1...v2.0.0
 [0.4.1]: https://github.com/physics91/claude-vibe/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/physics91/claude-vibe/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/physics91/claude-vibe/compare/v0.2.0...v0.3.0

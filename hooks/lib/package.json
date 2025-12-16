@@ -1,0 +1,21 @@
+{
+  "name": "@claude-vibe/hooks-lib",
+  "version": "2.0.0",
+  "description": "Core library for Claude Code hooks",
+  "main": "core/index.js",
+  "author": "physics91",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "keywords": [
+    "claude-code",
+    "hooks",
+    "plugin"
+  ],
+  "exports": {
+    ".": "./core/index.js",
+    "./core": "./core/index.js",
+    "./utils": "./utils/index.js"
+  }
+}

@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/pre-compact.cmd\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/pre-compact.js\"",
             "timeout": 5000
           }
         ]
@@ -18,8 +18,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.cmd\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/session-start.js\"",
             "timeout": 5000
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/status-line.js\"",
+            "timeout": 2000
           }
         ]
       }
@@ -30,8 +35,20 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/user-prompt-submit.cmd\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/user-prompt-submit.js\"",
             "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Read|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/pre-tool-use-safety.js\"",
+            "timeout": 3000
           }
         ]
       }
@@ -42,8 +59,37 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use.cmd\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use.js\"",
             "timeout": 3000
+          },
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/status-line.js\"",
+            "timeout": 2000
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/stop-quality-gate.js\"",
+            "timeout": 5000
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/notification-handler.js\"",
+            "timeout": 10000
           }
         ]
       }
