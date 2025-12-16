@@ -7,6 +7,9 @@ test-results.xml
 e2e-test-results.xml
 test-input.json
 
+# Node.js
+node_modules/
+
 # IDE
 .idea/
 .vscode/
