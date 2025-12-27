@@ -95,6 +95,74 @@ function checkPendingTodos(input) {
 }
 
 /**
+ * Check code quality (lint/format/typecheck)
+ * @param {string} cwd - Current working directory
+ * @returns {{hasIssues: boolean, issues: Object}}
+ */
+function checkCodeQuality(cwd) {
+  const issues = {
+    eslint: null,
+    typescript: null,
+    prettier: null
+  };
+  let hasIssues = false;
+
+  // Check if package.json exists
+  const packageJsonPath = path.join(cwd, 'package.json');
+  if (!fs.existsSync(packageJsonPath)) {
+    return { hasIssues: false, issues };
+  }
+
+  let packageJson;
+  try {
+    packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+  } catch {
+    return { hasIssues: false, issues };
+  }
+
+  const scripts = packageJson.scripts || {};
+  const devDeps = packageJson.devDependencies || {};
+  const deps = packageJson.dependencies || {};
+
+  // ESLint check
+  if (devDeps.eslint || deps.eslint || scripts.lint) {
+    try {
+      const lintCmd = scripts.lint ? 'npm run lint --silent' : 'npx eslint . --quiet --max-warnings=0';
+      execSync(lintCmd, { cwd, encoding: 'utf-8', timeout: 30000, stdio: 'pipe' });
+    } catch (error) {
+      issues.eslint = 'ESLint found issues';
+      hasIssues = true;
+      logger.debug('ESLint check failed', { error: error.message });
+    }
+  }
+
+  // TypeScript check
+  if (devDeps.typescript || deps.typescript || fs.existsSync(path.join(cwd, 'tsconfig.json'))) {
+    try {
+      execSync('npx tsc --noEmit --skipLibCheck', { cwd, encoding: 'utf-8', timeout: 60000, stdio: 'pipe' });
+    } catch (error) {
+      issues.typescript = 'TypeScript found type errors';
+      hasIssues = true;
+      logger.debug('TypeScript check failed', { error: error.message });
+    }
+  }
+
+  // Prettier check (optional - don't block, just suggest)
+  if (devDeps.prettier || deps.prettier) {
+    try {
+      const prettierCmd = scripts.format ? 'npm run format --silent -- --check' : 'npx prettier --check .';
+      execSync(prettierCmd, { cwd, encoding: 'utf-8', timeout: 30000, stdio: 'pipe' });
+    } catch (error) {
+      issues.prettier = 'Some files need formatting';
+      // Don't set hasIssues for prettier - just a suggestion
+      logger.debug('Prettier check failed', { error: error.message });
+    }
+  }
+
+  return { hasIssues, issues };
+}
+
+/**
  * Generate suggestions based on checks
  * @param {Object} checks - Check results
  * @returns {string[]} List of suggestions
@@ -113,6 +181,20 @@ function generateSuggestions(checks) {
 
   if (checks.pendingTodos.hasPending) {
     suggestions.push(`There are ${checks.pendingTodos.count} pending todo item(s).`);
+  }
+
+  // Code quality suggestions
+  if (checks.codeQuality) {
+    const { issues } = checks.codeQuality;
+    if (issues.eslint) {
+      suggestions.push(`${issues.eslint}. Run: npm run lint -- --fix`);
+    }
+    if (issues.typescript) {
+      suggestions.push(`${issues.typescript}. Run: npx tsc --noEmit`);
+    }
+    if (issues.prettier) {
+      suggestions.push(`${issues.prettier}. Run: npx prettier --write .`);
+    }
   }
 
   return suggestions;
@@ -141,17 +223,27 @@ function main() {
     const checks = {
       testStatus: checkTestStatus(cwd),
       uncommittedChanges: checkUncommittedChanges(cwd),
-      pendingTodos: checkPendingTodos(input)
+      pendingTodos: checkPendingTodos(input),
+      codeQuality: checkCodeQuality(cwd)
     };
 
     logger.debug('Check results', checks);
 
     // Determine if we should block
-    const shouldBlock = checks.testStatus.failing;
+    const shouldBlock = checks.testStatus.failing || checks.codeQuality.hasIssues;
 
     if (shouldBlock) {
-      const reason = checks.testStatus.message || 'Tests are failing';
-      logger.warn('Blocking stop due to failing tests', { reason });
+      const reasons = [];
+      if (checks.testStatus.failing) {
+        reasons.push(checks.testStatus.message || 'Tests are failing');
+      }
+      if (checks.codeQuality.hasIssues) {
+        const { issues } = checks.codeQuality;
+        if (issues.eslint) reasons.push(issues.eslint);
+        if (issues.typescript) reasons.push(issues.typescript);
+      }
+      const reason = reasons.join('. ');
+      logger.warn('Blocking stop due to quality issues', { reasons });
       outputAndExit(formatStopOutput('block', reason));
     }
 

@@ -23,6 +23,25 @@
 └── tests/              # Unit and E2E tests
 ```
 
+## Repository Defaults (Safe by Default)
+
+- Follow local + CI quality gates (format/lint/typecheck/test and any security/policy checks). If an exception is needed, document the reason, an alternative, and a safety net (tests/verification) in the PR.
+- Prefer KISS/YAGNI and single-responsibility design. Keep I/O (files/process/HTTP) at the edges so core logic stays testable.
+- DRY/SSOT: avoid duplicating business rules without premature abstraction (consider extracting after ~3 repeats). Keep schemas/contracts/policies as a single source of truth; treat caches/indexes/views as derived data that can be rebuilt.
+- Code clarity: intention-revealing names (include units like `timeoutMs`, `sizeBytes`; booleans `is/has/can`), small functions, avoid deep nesting, validate external inputs at boundaries, and prefer immutability/minimal shared state. Comments explain “why”, not “what”.
+- Errors/observability: preserve context and classify recoverability, never log secrets/PII, and carry a correlation/request id when available.
+- Testing: unit > integration > E2E. Test behavior/contracts (not implementation) and avoid time/random/network flakiness (fixed clock/seed and mocks/stubs).
+- Security/performance: separate authentication vs authorization, least privilege, keep secrets out of the repo, follow dependency vulnerability/license policy, measure before optimizing, avoid N+1/unnecessary I/O, and design caches with invalidation/consistency.
+- PR hygiene: keep PRs small, explain intent/tradeoffs, separate refactors from behavior changes, and leave touched code cleaner.
+
+### Pre-PR 2-Minute Check
+- Do names clearly communicate intent?
+- Is failure/edge-case behavior safe?
+- Do tests cover risky branches/boundaries?
+- Any security issues (inputs/permissions/secrets/deps)?
+- Any performance sanity issues (N+1/I-O blowups/unnecessary I/O)?
+- Can operators trace failures (logs/ids/error context)?
+
 ## Build & Run Commands
 
 ```bash
@@ -54,9 +73,9 @@
 - Use `Set-StrictMode -Version Latest`
 
 ### Error Handling
-- Graceful degradation: return empty string on error, don't block Claude
+- Graceful degradation: return empty output on error and don't block Claude
 - Exit code 0 for success, 2 for blocking errors
-- Log errors to stderr, output to stdout
+- Log errors to stderr with actionable context (no secrets/PII); write only hook output to stdout
 
 ## Architecture Guidelines
 
@@ -108,11 +127,11 @@
 ### Progress Management
 
 **MUST** use `AGENTS_PROGRESS.md` to track work progress:
-- Keep only **최근 5개** items (including completed tasks)
+- Keep only the 5 most recent items (including completed tasks)
 - Format each item as: `[status] Task description (timestamp)`
 - Statuses: `[ ]` Pending, `[~]` In Progress, `[x]` Completed
 - **ALWAYS** clean up old items when adding new ones
-- Never let this file grow beyond 5 active items
+- Never let this file grow beyond 5 items total
 
 **Example AGENTS_PROGRESS.md:**
 ```markdown

@@ -292,7 +292,7 @@ function Detect-ProjectType {
 
         $score = 0
         $maxScore = 0
-        $matches = @{
+        $detectionMatches = @{
             files = @()
             dependencies = @()
             patterns = @()
@@ -308,12 +308,12 @@ function Detect-ProjectType {
                     $foundFiles = Get-ChildItem -Path $ProjectRoot -Filter $file -ErrorAction SilentlyContinue
                     if ($foundFiles) {
                         $score += $script:FileDetectionScore
-                        $matches.files += $file
+                        $detectionMatches.files += $file
                     }
                 }
                 elseif (Test-Path $filePath) {
                     $score += $script:FileDetectionScore
-                    $matches.files += $file
+                    $detectionMatches.files += $file
                 }
             }
         }
@@ -326,7 +326,7 @@ function Detect-ProjectType {
             foreach ($dep in $config.detection.dependencies) {
                 if ($projectDeps -contains $dep) {
                     $score += $script:DependencyDetectionScore
-                    $matches.dependencies += $dep
+                    $detectionMatches.dependencies += $dep
                 }
             }
         }
@@ -339,7 +339,7 @@ function Detect-ProjectType {
                 $basePath = $patternPath -replace '\*\*.*$', ''
                 if (Test-Path $basePath) {
                     $score += $script:PatternDetectionScore
-                    $matches.patterns += $pattern
+                    $detectionMatches.patterns += $pattern
                 }
             }
         }
@@ -351,7 +351,7 @@ function Detect-ProjectType {
             score = $score
             maxScore = $maxScore
             confidence = $confidence
-            matches = $matches
+            matches = $detectionMatches
         }
     }
 
@@ -601,15 +601,15 @@ function Format-DetectionResult {
         }
 
         if ($DetectionResult.details.matches) {
-            $matches = $DetectionResult.details.matches
+            $detectionMatches = $DetectionResult.details.matches
 
-            if ($matches.files -and $matches.files.Count -gt 0) {
+            if ($detectionMatches.files -and $detectionMatches.files.Count -gt 0) {
                 $output += ""
-                $output += "**Matched Files**: $($matches.files -join ', ')"
+                $output += "**Matched Files**: $($detectionMatches.files -join ', ')"
             }
 
-            if ($matches.dependencies -and $matches.dependencies.Count -gt 0) {
-                $output += "**Matched Dependencies**: $($matches.dependencies -join ', ')"
+            if ($detectionMatches.dependencies -and $detectionMatches.dependencies.Count -gt 0) {
+                $output += "**Matched Dependencies**: $($detectionMatches.dependencies -join ', ')"
             }
         }
     }

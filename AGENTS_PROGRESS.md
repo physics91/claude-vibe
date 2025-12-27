@@ -1,8 +1,7 @@
-# Claude-Vibe 진행 현황
+# Work Progress
 
-[x] v0.4.0 메모리 캐싱 시스템 구현 (2025-11-27)
-[x] v0.4.0 사용자 친화적 에러 메시지 시스템 (2025-11-27)
-[x] v0.4.0 API 레퍼런스 문서 작성 (2025-11-27)
-[x] v0.4.0 트러블슈팅 가이드 작성 (2025-11-27)
-[x] v0.4.0 E2E 테스트 추가 및 검증 (2025-11-27)
-[x] v0.4.0 AI 코드 리뷰 3라운드 완료 - 10개 개선사항 적용 (2025-11-27)
+[x] Integrate ai-code-agent-mcp with security fix (2025-12-27)
+[x] Kotlin LSP IntelliJ troubleshooting enhancement (2025-12-22)
+[x] Kotlin LSP skill creation (2025-12-22)
+[x] Skill accuracy and test-focused MVP planning (2025-12-19)
+[x] Add lint-agents command and AGENTS linter (2025-12-18)

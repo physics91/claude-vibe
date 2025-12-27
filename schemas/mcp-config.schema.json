@@ -1,0 +1,254 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://physics91.com/claude-vibe/schemas/mcp-config.schema.json",
+  "title": "McpServerConfig",
+  "description": "Schema for embedded MCP server configuration",
+  "type": "object",
+  "required": ["name", "version", "transport"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "MCP server name",
+      "minLength": 1,
+      "maxLength": 100
+    },
+    "version": {
+      "type": "string",
+      "description": "MCP server version",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "MCP server description",
+      "maxLength": 500
+    },
+    "transport": {
+      "type": "object",
+      "description": "Transport configuration",
+      "required": ["type", "command"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["stdio", "http", "websocket"],
+          "description": "Transport protocol"
+        },
+        "command": {
+          "type": "string",
+          "description": "Command to start the server (e.g., 'node')",
+          "minLength": 1
+        },
+        "args": {
+          "type": "array",
+          "description": "Command arguments",
+          "items": { "type": "string" },
+          "maxItems": 20
+        },
+        "cwd": {
+          "type": "string",
+          "description": "Working directory for the command"
+        },
+        "env": {
+          "type": "object",
+          "description": "Environment variables",
+          "additionalProperties": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "tools": {
+      "type": "array",
+      "description": "List of tools provided by this MCP server",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Tool name",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "description": {
+            "type": "string",
+            "description": "Tool description",
+            "maxLength": 500
+          },
+          "category": {
+            "type": "string",
+            "enum": ["analysis", "security", "performance", "utility"],
+            "description": "Tool category"
+          },
+          "estimatedTokens": {
+            "type": "integer",
+            "description": "Estimated token cost per invocation",
+            "minimum": 0,
+            "maximum": 50000
+          }
+        },
+        "additionalProperties": false
+      },
+      "maxItems": 50
+    },
+    "prompts": {
+      "type": "array",
+      "description": "List of prompts provided by this MCP server",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Prompt name",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "description": {
+            "type": "string",
+            "description": "Prompt description",
+            "maxLength": 500
+          }
+        },
+        "additionalProperties": false
+      },
+      "maxItems": 20
+    },
+    "resources": {
+      "type": "array",
+      "description": "List of resources provided by this MCP server",
+      "items": {
+        "type": "object",
+        "required": ["uri"],
+        "properties": {
+          "uri": {
+            "type": "string",
+            "description": "Resource URI pattern"
+          },
+          "name": {
+            "type": "string",
+            "description": "Resource name"
+          },
+          "description": {
+            "type": "string",
+            "description": "Resource description"
+          }
+        },
+        "additionalProperties": false
+      },
+      "maxItems": 20
+    },
+    "config": {
+      "type": "object",
+      "description": "Server-specific configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Whether the server is enabled by default",
+          "default": true
+        },
+        "timeout": {
+          "type": "integer",
+          "description": "Server timeout in milliseconds",
+          "minimum": 1000,
+          "maximum": 300000,
+          "default": 30000
+        },
+        "retryAttempts": {
+          "type": "integer",
+          "description": "Number of retry attempts on failure",
+          "minimum": 0,
+          "maximum": 10,
+          "default": 3
+        },
+        "cache": {
+          "type": "object",
+          "description": "Caching configuration",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "ttlMs": {
+              "type": "integer",
+              "description": "Cache TTL in milliseconds",
+              "minimum": 0,
+              "maximum": 86400000,
+              "default": 3600000
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "dependencies": {
+      "type": "object",
+      "description": "External dependencies required by this MCP server",
+      "properties": {
+        "cliTools": {
+          "type": "array",
+          "description": "Required CLI tools",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "CLI tool name (e.g., 'codex', 'gemini')"
+              },
+              "required": {
+                "type": "boolean",
+                "description": "Whether this CLI is required",
+                "default": false
+              },
+              "checkCommand": {
+                "type": "string",
+                "description": "Command to check if CLI is available"
+              }
+            },
+            "additionalProperties": false
+          },
+          "maxItems": 10
+        },
+        "nodeVersion": {
+          "type": "string",
+          "description": "Minimum Node.js version required",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "tokenEstimate": {
+      "type": "integer",
+      "description": "Estimated token footprint for this MCP server",
+      "minimum": 0,
+      "maximum": 50000,
+      "default": 6000
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Additional metadata",
+      "properties": {
+        "author": {
+          "type": "string"
+        },
+        "repository": {
+          "type": "string",
+          "format": "uri"
+        },
+        "license": {
+          "type": "string"
+        },
+        "sourceVersion": {
+          "type": "string",
+          "description": "Version of the source repository this was copied from"
+        },
+        "sourceCommit": {
+          "type": "string",
+          "description": "Git commit hash of the source"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

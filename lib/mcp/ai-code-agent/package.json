@@ -1,0 +1,58 @@
+{
+  "name": "@claude-vibe/ai-code-agent-mcp",
+  "version": "1.3.0",
+  "private": true,
+  "description": "Embedded MCP server for AI-powered code analysis using Codex and Gemini CLIs",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "build:prod": "tsup src/index.ts --format esm --minify --clean",
+    "dev": "tsx src/index.ts",
+    "watch": "tsup src/index.ts --format esm --dts --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\""
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "code-analysis",
+    "ai",
+    "codex",
+    "gemini",
+    "claude-vibe"
+  ],
+  "author": "physics91",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.24.3",
+    "better-sqlite3": "^12.5.0",
+    "cosmiconfig": "^9.0.0",
+    "dotenv": "^16.3.1",
+    "drizzle-orm": "^0.45.1",
+    "execa": "^8.0.1",
+    "p-queue": "^8.0.1",
+    "p-retry": "^6.1.0",
+    "pino": "^8.17.2",
+    "pino-pretty": "^10.3.1",
+    "uuid": "^9.0.1",
+    "zod": "^3.22.4",
+    "zod-to-json-schema": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20.10.6",
+    "@types/uuid": "^9.0.7",
+    "tsup": "^8.0.1",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  },
+  "metadata": {
+    "sourceRepository": "https://github.com/physics91/ai-code-review-mcp.git",
+    "sourceVersion": "1.3.0",
+    "integratedAt": "2025-12-27"
+  }
+}

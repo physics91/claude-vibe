@@ -181,6 +181,7 @@ Multi-channel notification support:
 | `/context-setup` | Interactive context configuration |
 | `/context-status` | Display current context status |
 | `/init-agents` | Initialize AGENTS.md for project |
+| `/lint-agents` | Lint AGENTS.md and AGENTS_PROGRESS.md |
 | `/skill-test` | Test skill detection logic |
 | `/skill-log` | View activation history |
 | `/debug` | Toggle debug mode |
@@ -231,7 +232,7 @@ claude-vibe/
 │   ├── flutter-reviewer/   # Flutter/Dart review (v2.0)
 │   ├── ml-reviewer/        # ML/DL review (v2.0)
 │   └── ...                 # Additional skills
-├── commands/               # 17 slash commands (7 + 10 express)
+├── commands/               # 18 slash commands (8 + 10 express)
 ├── presets/                # 9 context presets
 └── tests/                  # Test scripts
     ├── hooks.test.js       # Hook unit tests (v2.0)
@@ -297,6 +298,12 @@ claude-vibe/
 ## Testing
 
 ```bash
+# Run all tests
+powershell -NoProfile -ExecutionPolicy Bypass -File tests/run-all-tests.ps1
+
+# Or on macOS/Linux
+bash tests/run-all-tests.sh
+
 # Run all hook tests (v2.0)
 node tests/hooks.test.js
 

@@ -34,7 +34,7 @@
     ]
   },
   "mcp": {
-    "enabled": ["brave-search", "context7", "github"],
+    "enabled": ["brave-search", "context7", "github", "ai-code-agent-mcp"],
     "disabled": ["playwright", "filesystem", "kubernetes"]
   },
   "agents": {

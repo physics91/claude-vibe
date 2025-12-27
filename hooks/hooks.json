@@ -37,6 +37,11 @@
             "type": "command",
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/user-prompt-submit.js\"",
             "timeout": 5000
+          },
+          {
+            "type": "prompt",
+            "prompt": "Analyze this user request and determine if AGENTS.md context reinforcement is needed.\n\nUser Request: $USER_PROMPT\n\nRules:\n1. If this is a development/coding task (writing code, fixing bugs, refactoring, creating features), check if AGENTS.md guidelines apply.\n2. If AGENTS.md exists and contains relevant guidelines for this task, briefly remind about key applicable guidelines.\n3. For non-coding requests (questions, explanations, casual chat), return empty response.\n4. Keep reminders concise (1-2 sentences max).\n5. Focus on: coding standards, error handling patterns, testing requirements, architecture guidelines.\n\nOutput format:\n- If reinforcement needed: Return a brief systemMessage with the most relevant AGENTS.md guideline(s).\n- If not needed: Return empty object {}",
+            "timeout": 10000
           }
         ]
       }

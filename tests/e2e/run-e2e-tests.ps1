@@ -203,7 +203,7 @@ try {
     Start-Sleep -Seconds 1
 
     # Check if log file was created
-    $logFiles = Get-LogFiles -PluginRoot $projectRoot
+    $logFiles = @(Get-LogFiles -PluginRoot $projectRoot)
     $logCreated = $logFiles.Count -gt 0
 
     if (Write-TestResult `
@@ -266,10 +266,15 @@ Write-Host ""
 Write-Host "================================" -ForegroundColor Cyan
 Write-Host "Test Summary" -ForegroundColor Cyan
 Write-Host "================================" -ForegroundColor Cyan
+
+# Count actual assertions (passed + failed) for an accurate summary.
+$totalTests = $passedTests + $failedTests
+$successRate = if ($totalTests -gt 0) { [math]::Round(($passedTests / $totalTests) * 100, 2) } else { 0 }
+
 Write-Host "Total Tests: $totalTests"
 Write-Host "Passed: $passedTests" -ForegroundColor Green
 Write-Host "Failed: $failedTests" -ForegroundColor $(if ($failedTests -eq 0) { "Green" } else { "Red" })
-Write-Host "Success Rate: $([math]::Round(($passedTests / $totalTests) * 100, 2))%"
+Write-Host "Success Rate: $successRate%"
 Write-Host ""
 
 if ($failedTests -eq 0) {

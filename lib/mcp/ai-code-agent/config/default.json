@@ -1,0 +1,168 @@
+{
+  "$schema": "./schema.json",
+  "server": {
+    "name": "ai-code-agent-mcp",
+    "version": "1.3.0",
+    "logLevel": "info",
+    "transport": "stdio"
+  },
+  "codex": {
+    "enabled": true,
+    "cliPath": "auto",
+    "timeout": 0,
+    "retryAttempts": 3,
+    "retryDelay": 1000,
+    "maxConcurrent": 1,
+    "queue": {},
+    "output": {
+      "mode": "last-message",
+      "outputSchemaPath": "./config/codex-output.schema.json"
+    },
+    "model": "gpt-5.2",
+    "search": true,
+    "reasoningEffort": "xhigh",
+    "args": []
+  },
+  "gemini": {
+    "enabled": true,
+    "cliPath": "auto",
+    "timeout": 0,
+    "retryAttempts": 3,
+    "retryDelay": 1000,
+    "maxConcurrent": 1,
+    "queue": {},
+    "model": "gemini-3-pro-preview",
+    "args": []
+  },
+  "analysis": {
+    "maxCodeLength": 50000,
+    "includeContext": true,
+    "defaultLanguage": null,
+    "maxFindings": 200,
+    "maxCodeSnippetLength": 4000,
+    "maxOutputChars": 200000,
+    "formats": ["markdown", "json"],
+    "defaultSeverity": "all",
+    "deduplication": {
+      "enabled": true,
+      "similarityThreshold": 0.8
+    }
+  },
+  "retry": {
+    "maxAttempts": 3,
+    "initialDelay": 1000,
+    "maxDelay": 10000,
+    "backoffFactor": 2,
+    "retryableErrors": [
+      "TIMEOUT_ERROR",
+      "NETWORK_ERROR",
+      "CLI_EXECUTION_ERROR"
+    ]
+  },
+  "logging": {
+    "level": "info",
+    "pretty": false,
+    "file": {
+      "enabled": true,
+      "path": "~/.claude/claude-vibe/logs/ai-code-agent-mcp.log",
+      "maxSize": "10M",
+      "maxFiles": 3
+    }
+  },
+  "cache": {
+    "enabled": true,
+    "ttl": 3600000,
+    "maxSize": 1000,
+    "strategy": "lru",
+    "cleanupIntervalMs": 300000,
+    "touchIntervalMs": 30000
+  },
+  "storage": {
+    "type": "sqlite",
+    "sqlite": {
+      "path": "~/.claude/claude-vibe/data/ai-code-agent.db",
+      "enableWAL": true,
+      "busyTimeout": 5000
+    }
+  },
+  "secretScanning": {
+    "enabled": true,
+    "maxScanLength": 200000,
+    "maxLineLength": 10000,
+    "patterns": {
+      "aws": true,
+      "gcp": true,
+      "azure": true,
+      "github": true,
+      "generic": true,
+      "database": true,
+      "privateKeys": true
+    },
+    "excludePatterns": [
+      ".*\\.test\\.(ts|js|tsx|jsx)$",
+      ".*\\.spec\\.(ts|js|tsx|jsx)$",
+      ".*__tests__.*",
+      ".*\\.mock\\.(ts|js)$"
+    ]
+  },
+  "context": {
+    "defaults": {
+      "scope": "partial"
+    },
+    "presets": {
+      "react-web": {
+        "threatModel": "web-public",
+        "platform": "cross-platform",
+        "projectType": "web-app",
+        "framework": "react",
+        "language": "typescript",
+        "focus": ["security", "performance"]
+      },
+      "nodejs-api": {
+        "threatModel": "internal-service",
+        "platform": "unix",
+        "projectType": "api",
+        "framework": "express",
+        "language": "typescript",
+        "focus": ["security", "performance"]
+      },
+      "mcp-server": {
+        "threatModel": "local-user-tool",
+        "platform": "cross-platform",
+        "projectType": "mcp-server",
+        "language": "typescript",
+        "focus": ["security", "bugs"]
+      },
+      "cli-tool": {
+        "threatModel": "local-user-tool",
+        "platform": "cross-platform",
+        "projectType": "cli",
+        "language": "typescript",
+        "focus": ["bugs", "style"]
+      },
+      "library": {
+        "threatModel": "library",
+        "platform": "cross-platform",
+        "projectType": "library",
+        "language": "typescript",
+        "scope": "full",
+        "focus": ["bugs", "performance", "style"]
+      }
+    },
+    "activePreset": null,
+    "allowEnvOverride": true,
+    "autoDetect": true
+  },
+  "prompts": {
+    "defaultTemplate": "default",
+    "serviceTemplates": {
+      "codex": "default",
+      "gemini": "default"
+    }
+  },
+  "warnings": {
+    "enabled": true,
+    "showTips": true,
+    "suppressions": []
+  }
+}

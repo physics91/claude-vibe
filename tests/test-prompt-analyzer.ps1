@@ -1,6 +1,7 @@
 # Test script for Prompt Analyzer
 
 $ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
 
 # Get the project root
 $projectRoot = Split-Path -Parent $PSScriptRoot
@@ -15,43 +16,43 @@ Write-Host ""
 # Test cases
 $testCases = @(
     @{
-        Name          = "너무 짧은 프롬프트"
-        Prompt        = "이거 고쳐줘"
+        Name          = "Too short prompt"
+        Prompt        = "fix this"
         ShouldBeAmbiguous = $true
     },
     @{
-        Name          = "명확한 프롬프트"
-        Prompt        = "src/utils/validation.ts 파일의 emailValidator 함수에서 정규식을 RFC 5322 표준에 맞게 수정해주세요"
+        Name          = "Clear prompt with file path + specific change"
+        Prompt        = "In src/utils/validation.ts, update the emailValidator regex to match RFC 5322."
         ShouldBeAmbiguous = $false
     },
     @{
-        Name          = "대명사 과다 사용"
-        Prompt        = "이거를 저거처럼 고쳐서 그거에 넣어줘"
+        Name          = "Pronoun-heavy vague instructions"
+        Prompt        = "Make it work like that and put it there."
         ShouldBeAmbiguous = $true
     },
     @{
-        Name          = "프로젝트 타입만 언급"
-        Prompt        = "웹사이트 만들어줘"
+        Name          = "Only project type mentioned"
+        Prompt        = "make a website"
         ShouldBeAmbiguous = $true
     },
     @{
-        Name          = "기술 스택 포함한 상세 요청"
-        Prompt        = "React와 TypeScript를 사용해서 사용자 인증 기능이 있는 Todo 앱을 만들어주세요. PostgreSQL과 Prisma를 백엔드로 사용합니다"
+        Name          = "Detailed request with tech stack"
+        Prompt        = "Create a Todo app using React and TypeScript with user authentication. Use PostgreSQL and Prisma for the backend."
         ShouldBeAmbiguous = $false
     },
     @{
-        Name          = "모호한 최적화 요청"
-        Prompt        = "코드 최적화해줘"
+        Name          = "Vague optimization request"
+        Prompt        = "optimize the code"
         ShouldBeAmbiguous = $true
     },
     @{
-        Name          = "구체적인 최적화 요청"
-        Prompt        = "src/components/DataTable.tsx의 렌더링 성능을 개선해주세요. 현재 10,000개 행을 렌더링할 때 3초가 걸립니다"
+        Name          = "Specific optimization request"
+        Prompt        = "Improve rendering performance in src/components/DataTable.tsx. Rendering 10,000 rows currently takes ~3 seconds."
         ShouldBeAmbiguous = $false
     },
     @{
-        Name          = "데이터베이스 언급 (기술 스택 없음)"
-        Prompt        = "데이터베이스 연결해줘"
+        Name          = "Database mentioned (missing tech stack)"
+        Prompt        = "Connect a database"
         ShouldBeAmbiguous = $true
     }
 )
@@ -68,23 +69,27 @@ foreach ($test in $testCases) {
     $isCorrect = $result.IsAmbiguous -eq $test.ShouldBeAmbiguous
 
     if ($isCorrect) {
-        Write-Host "  ✓ PASSED" -ForegroundColor Green
+        Write-Host "  PASS" -ForegroundColor Green
         $passed++
     }
     else {
-        Write-Host "  ✗ FAILED" -ForegroundColor Red
+        Write-Host "  FAIL" -ForegroundColor Red
         Write-Host "    Expected: Ambiguous=$($test.ShouldBeAmbiguous)" -ForegroundColor Red
         Write-Host "    Got: Ambiguous=$($result.IsAmbiguous), Score=$($result.AmbiguityScore)" -ForegroundColor Red
         $failed++
     }
-
+ 
     Write-Host "  Score: $($result.AmbiguityScore)"
-    if ($result.Reasons.Count -gt 0) {
-        Write-Host "  Reasons: $($result.Reasons -join ', ')"
+
+    $reasons = @($result.Reasons | Where-Object { $_ -and -not [string]::IsNullOrWhiteSpace($_) })
+    if ($reasons.Count -gt 0) {
+        Write-Host "  Reasons: $($reasons -join ', ')"
     }
-    if ($result.Questions.Count -gt 0) {
+
+    $questions = @($result.Questions | Where-Object { $_ -and -not [string]::IsNullOrWhiteSpace($_) })
+    if ($questions.Count -gt 0) {
         Write-Host "  Questions:"
-        foreach ($q in $result.Questions) {
+        foreach ($q in $questions) {
             Write-Host "    - $q"
         }
     }
@@ -95,7 +100,7 @@ foreach ($test in $testCases) {
 Write-Host "=== Testing Clarification Generation ===" -ForegroundColor Cyan
 Write-Host ""
 
-$ambiguousPrompt = "웹사이트 만들어줘"
+$ambiguousPrompt = "make a website"
 $analysis = Test-PromptAmbiguity -Prompt $ambiguousPrompt
 
 if ($analysis.IsAmbiguous) {
@@ -116,10 +121,10 @@ Write-Host "Failed: $failed" -ForegroundColor Red
 Write-Host "Total: $($passed + $failed)"
 
 if ($failed -eq 0) {
-    Write-Host "`n✓ All tests passed!" -ForegroundColor Green
+    Write-Host "`nAll tests passed!" -ForegroundColor Green
     exit 0
 }
 else {
-    Write-Host "`n✗ Some tests failed" -ForegroundColor Red
+    Write-Host "`nSome tests failed" -ForegroundColor Red
     exit 1
 }

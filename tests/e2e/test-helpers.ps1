@@ -121,7 +121,7 @@ function Get-LogFiles {
         return @()
     }
 
-    return Get-ChildItem -Path $logsDir -Filter "*.log" | Sort-Object LastWriteTime -Descending
+    return @(Get-ChildItem -Path $logsDir -Filter "*.log" | Sort-Object LastWriteTime -Descending)
 }
 
 function Test-LogFileContains {
