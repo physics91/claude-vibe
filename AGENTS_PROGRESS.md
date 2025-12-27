@@ -1,5 +1,10 @@
 # Work Progress
 
+[x] Phase 13 RetryManager tests for ai-code-agent MCP (2025-12-27)
+    - Add 22 new tests: 854 total tests (up from 832)
+    - RetryManager: execute with retry, exponential backoff, max delay cap
+    - Edge cases: maxAttempts=0, non-retryable errors, error propagation
+    - Coverage: core/retry 55.81% → 100%, overall 87.80% → 88.08%
 [x] Phase 12 Utils tests for ai-code-agent MCP (2025-12-27)
     - Add 75 new tests: 832 total tests (up from 757)
     - Utils: generateUUID, generateHash, sanitizeParams, countLines
