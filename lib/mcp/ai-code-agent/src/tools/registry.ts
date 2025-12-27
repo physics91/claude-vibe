@@ -15,13 +15,11 @@ import { z } from 'zod';
 
 import { ErrorHandler } from '../core/error-handler.js';
 import type { Logger } from '../core/logger.js';
-import { ValidationUtils } from '../core/validation.js';
+import { ValidationUtils, getNumberProperty } from '../core/validation.js';
 import type { ServerConfig } from '../schemas/config.js';
 import {
   createCombinedAnalysisInputSchema,
   createCodeAnalysisParamsSchema,
-  type AggregatedAnalysis,
-  type AnalysisResult,
 } from '../schemas/tools.js';
 import type { AnalysisAggregator } from '../services/aggregator/merger.js';
 import { AnalysisStatusStore } from '../services/analysis-status/store.js';
@@ -30,6 +28,7 @@ import { generateShortCacheKey, type CacheKeyParams } from '../services/cache/ca
 import type { CodexAnalysisService } from '../services/codex/client.js';
 import type { GeminiAnalysisService } from '../services/gemini/client.js';
 import { SecretScanner } from '../services/scanner/secrets.js';
+import { ResultFormatter } from './formatters/index.js';
 
 // Schema for scan_secrets input
 const ScanSecretsInputSchema = z.object({
@@ -66,121 +65,6 @@ export interface ToolDependencies {
   config: ServerConfig;
   secretScanner?: SecretScanner;
   cacheService?: CacheService;
-}
-
-/**
- * Format analysis result as markdown
- */
-function formatAnalysisAsMarkdown(
-  result: AnalysisResult | AggregatedAnalysis,
-  options?: {
-    maxFindings?: number;
-    maxCodeSnippetLength?: number;
-    maxOutputChars?: number;
-  }
-): string {
-  const lines: string[] = [];
-  const maxFindings =
-    typeof options?.maxFindings === 'number' && options.maxFindings > 0
-      ? options.maxFindings
-      : Number.POSITIVE_INFINITY;
-  const maxCodeSnippetLength =
-    typeof options?.maxCodeSnippetLength === 'number' && options.maxCodeSnippetLength > 0
-      ? options.maxCodeSnippetLength
-      : Number.POSITIVE_INFINITY;
-
-  // Overall Assessment
-  lines.push('## Overall Assessment\n');
-  lines.push(result.overallAssessment);
-  lines.push('');
-
-  // Summary
-  if (result.summary.totalFindings > 0) {
-    lines.push('## Summary\n');
-    lines.push(`- **Total Issues:** ${result.summary.totalFindings}`);
-    if (result.summary.critical > 0) lines.push(`- **Critical:** ${result.summary.critical}`);
-    if (result.summary.high > 0) lines.push(`- **High:** ${result.summary.high}`);
-    if (result.summary.medium > 0) lines.push(`- **Medium:** ${result.summary.medium}`);
-    if (result.summary.low > 0) lines.push(`- **Low:** ${result.summary.low}`);
-    lines.push('');
-  }
-
-  // Findings
-  if (result.findings.length > 0) {
-    lines.push('## Findings\n');
-    const findingsToRender = result.findings.slice(0, maxFindings);
-    findingsToRender.forEach((finding, index) => {
-      const severityEmoji =
-        {
-          critical: '🔴',
-          high: '🟠',
-          medium: '🟡',
-          low: '🔵',
-          info: '⚪',
-        }[finding.severity] ?? '⚪';
-
-      lines.push(`### ${index + 1}. ${severityEmoji} ${finding.title}`);
-      lines.push(`**Severity:** ${finding.severity.toUpperCase()} | **Type:** ${finding.type}`);
-      if (finding.line) lines.push(`**Line:** ${finding.line}`);
-      lines.push('');
-      lines.push(`**Description:**`);
-      lines.push(finding.description);
-      lines.push('');
-      if (finding.suggestion) {
-        lines.push(`**Suggestion:**`);
-        lines.push(finding.suggestion);
-        lines.push('');
-      }
-      if (finding.code) {
-        const code =
-          finding.code.length > maxCodeSnippetLength
-            ? `${finding.code.slice(0, maxCodeSnippetLength)}\n... (truncated)`
-            : finding.code;
-        lines.push('**Code:**');
-        lines.push('```');
-        lines.push(code);
-        lines.push('```');
-        lines.push('');
-      }
-    });
-
-    if (result.findings.length > findingsToRender.length) {
-      lines.push(
-        `*Showing ${findingsToRender.length} of ${result.findings.length} findings. Increase maxFindings to view more.*`
-      );
-      lines.push('');
-    }
-  }
-
-  // Recommendations
-  if (result.recommendations && result.recommendations.length > 0) {
-    lines.push('## Recommendations\n');
-    result.recommendations.forEach(rec => {
-      lines.push(`- ${rec}`);
-    });
-    lines.push('');
-  }
-
-  // Metadata footer
-  lines.push('---');
-  lines.push(`*Analysis ID: ${result.analysisId} | Source: ${result.source}*`);
-
-  // Feedback request message
-  lines.push('');
-  lines.push(
-    '**Do you agree with this analysis?** If you have any objections or additional context, please share your feedback.'
-  );
-
-  const output = lines.join('\n');
-  if (
-    typeof options?.maxOutputChars === 'number' &&
-    options.maxOutputChars > 0 &&
-    output.length > options.maxOutputChars
-  ) {
-    return `${output.slice(0, options.maxOutputChars)}\n\n...[truncated]`;
-  }
-
-  return output;
 }
 
 /**
@@ -242,12 +126,9 @@ export class ToolRegistry {
   }
 
   private getMaxCodeLengthOverride(args: unknown, fallback: number): number {
-    if (typeof args !== 'object' || args === null) {
-      return fallback;
-    }
-
-    const value = (args as Record<string, unknown>).maxCodeLength;
-    if (typeof value !== 'number' || !Number.isFinite(value)) {
+    // Use type guard instead of unsafe cast
+    const value = getNumberProperty(args, 'maxCodeLength');
+    if (value === undefined) {
       return fallback;
     }
 
@@ -356,7 +237,7 @@ export class ToolRegistry {
           content: [
             {
               type: 'text' as const,
-              text: formatAnalysisAsMarkdown(result, {
+              text: ResultFormatter.formatAnalysis(result, {
                 maxFindings: config.analysis.maxFindings,
                 maxCodeSnippetLength: config.analysis.maxCodeSnippetLength,
                 maxOutputChars: config.analysis.maxOutputChars,
@@ -729,7 +610,7 @@ export class ToolRegistry {
         content: [
           {
             type: 'text' as const,
-            text: formatAnalysisAsMarkdown(aggregated, {
+            text: ResultFormatter.formatAnalysis(aggregated, {
               maxFindings: config.analysis.maxFindings,
               maxCodeSnippetLength: config.analysis.maxCodeSnippetLength,
               maxOutputChars: config.analysis.maxOutputChars,
@@ -809,7 +690,7 @@ export class ToolRegistry {
         high: secretFindings.filter(f => f.severity === 'high').length,
         medium: secretFindings.filter(f => f.severity === 'medium').length,
         low: secretFindings.filter(f => f.severity === 'low').length,
-        byCategory: this.groupByCategory(secretFindings),
+        byCategory: ResultFormatter.groupByCategory(secretFindings),
       },
       findings: analysisFindings,
       metadata: {
@@ -824,8 +705,8 @@ export class ToolRegistry {
       'Secret scanning completed'
     );
 
-    // Format as markdown
-    const markdown = this.formatSecretScanAsMarkdown(result);
+    // Format as markdown using ResultFormatter
+    const markdown = ResultFormatter.formatSecretScan(result);
 
     return {
       content: [
@@ -835,102 +716,5 @@ export class ToolRegistry {
         },
       ],
     };
-  }
-
-  /**
-   * Group secret findings by category
-   */
-  private groupByCategory(findings: Array<{ category: string }>): Record<string, number> {
-    const groups: Record<string, number> = {};
-    for (const finding of findings) {
-      groups[finding.category] = (groups[finding.category] ?? 0) + 1;
-    }
-    return groups;
-  }
-
-  /**
-   * Format secret scan result as markdown
-   */
-  private formatSecretScanAsMarkdown(result: {
-    scanId: string;
-    summary: {
-      totalFindings: number;
-      critical: number;
-      high: number;
-      medium: number;
-      low: number;
-      byCategory: Record<string, number>;
-    };
-    findings: Array<{
-      type: string;
-      severity: string;
-      line: number | null;
-      title: string;
-      description: string;
-      suggestion?: string;
-    }>;
-    metadata: {
-      duration: number;
-      patternsUsed: number;
-      fileName?: string;
-    };
-  }): string {
-    const lines: string[] = [];
-
-    lines.push('# Secret Scan Results\n');
-
-    // Summary
-    if (result.summary.totalFindings === 0) {
-      lines.push('No secrets detected in the code.\n');
-    } else {
-      lines.push('## Summary\n');
-      lines.push(`- **Total Secrets Found:** ${result.summary.totalFindings}`);
-      if (result.summary.critical > 0) lines.push(`- **Critical:** ${result.summary.critical}`);
-      if (result.summary.high > 0) lines.push(`- **High:** ${result.summary.high}`);
-      if (result.summary.medium > 0) lines.push(`- **Medium:** ${result.summary.medium}`);
-      if (result.summary.low > 0) lines.push(`- **Low:** ${result.summary.low}`);
-      lines.push('');
-
-      // By category
-      const categories = Object.entries(result.summary.byCategory);
-      if (categories.length > 0) {
-        lines.push('### By Category\n');
-        for (const [category, count] of categories) {
-          lines.push(`- **${category.replace(/_/g, ' ')}:** ${count}`);
-        }
-        lines.push('');
-      }
-
-      // Findings
-      lines.push('## Findings\n');
-      result.findings.forEach((finding, index) => {
-        const severityEmoji =
-          {
-            critical: '🔴',
-            high: '🟠',
-            medium: '🟡',
-            low: '🔵',
-          }[finding.severity] ?? '⚪';
-
-        lines.push(`### ${index + 1}. ${severityEmoji} ${finding.title}`);
-        lines.push(`**Severity:** ${finding.severity.toUpperCase()}`);
-        if (finding.line) lines.push(`**Line:** ${finding.line}`);
-        lines.push('');
-        lines.push(finding.description);
-        lines.push('');
-        if (finding.suggestion) {
-          lines.push(`**Recommendation:** ${finding.suggestion}`);
-          lines.push('');
-        }
-      });
-    }
-
-    // Metadata
-    lines.push('---');
-    lines.push(
-      `*Scan ID: ${result.scanId} | Patterns: ${result.metadata.patternsUsed} | Duration: ${result.metadata.duration}ms*`
-    );
-
-    return lines.join('\n');
   }
 }

@@ -25,6 +25,12 @@ import {
 import { type Logger } from '../../core/logger.js';
 import type { TemplateEngineConfig } from '../../core/prompt-template.js';
 import { generateUUID, sanitizeParams } from '../../core/utils.js';
+import {
+  isTimeoutError,
+  isExitCodeError,
+  isPlainObject,
+  getStringProperty,
+} from '../../core/validation.js';
 import type { WarningConfig } from '../../core/warnings.js';
 import { AnalysisResponseSchema, type AnalysisResponse } from '../../schemas/responses.js';
 import {
@@ -311,14 +317,11 @@ export class CodexAnalysisService extends BaseAnalysisService {
       const result = await runCodex(args);
       return await readOutput(result, lastMessagePath);
     } catch (error: unknown) {
-      const err = error as {
-        timedOut?: boolean;
-        exitCode?: number;
-        stderr?: string;
-        stdout?: string;
-      };
+      // Use type guards for safe property access
+      const stderr = getStringProperty(error, 'stderr') ?? '';
+      const stdout = getStringProperty(error, 'stdout') ?? '';
 
-      const combinedOutput = `${err.stderr ?? ''}\n${err.stdout ?? ''}`.toLowerCase();
+      const combinedOutput = `${stderr}\n${stdout}`.toLowerCase();
       const outputFlagMentioned =
         combinedOutput.includes('--output-last-message') ||
         combinedOutput.includes('output-last-message');
@@ -342,24 +345,18 @@ export class CodexAnalysisService extends BaseAnalysisService {
         }
       }
 
-      const finalError = error as {
-        timedOut?: boolean;
-        exitCode?: number;
-        stderr?: string;
-        stdout?: string;
-      };
-
-      if (finalError.timedOut) {
+      // Use type guards for final error handling
+      if (isTimeoutError(error)) {
         throw new TimeoutError(`Codex CLI timed out after ${timeout}ms`);
       }
-      if (finalError.exitCode !== undefined && finalError.exitCode !== 0) {
-        throw new CLIExecutionError(`Codex CLI exited with code ${finalError.exitCode}`, {
-          exitCode: finalError.exitCode,
-          stderr: finalError.stderr,
-          stdout: finalError.stdout,
+      if (isExitCodeError(error)) {
+        throw new CLIExecutionError(`Codex CLI exited with code ${error.exitCode}`, {
+          exitCode: error.exitCode,
+          stderr: error.stderr,
+          stdout: error.stdout,
         });
       }
-      throw new CLIExecutionError('Codex CLI execution failed', { cause: finalError });
+      throw new CLIExecutionError('Codex CLI execution failed', { cause: error });
     } finally {
       if (cleanupPath) {
         await unlink(cleanupPath).catch(error => {

@@ -716,3 +716,133 @@ export class ValidationUtils {
     return { sanitized, warnings };
   }
 }
+
+/**
+ * Type Guards
+ * SOLID: Provides proper runtime type checking instead of unsafe casts
+ */
+
+/**
+ * Check if value is a plain object (not null, not array)
+ */
+export function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Check if value is a record with string keys
+ */
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return isPlainObject(value);
+}
+
+/**
+ * Check if value has a specific property
+ */
+export function hasProperty<K extends string>(
+  value: unknown,
+  key: K
+): value is Record<K, unknown> {
+  return isPlainObject(value) && key in value;
+}
+
+/**
+ * Check if value has a string property
+ */
+export function hasStringProperty<K extends string>(
+  value: unknown,
+  key: K
+): value is Record<K, string> {
+  return hasProperty(value, key) && typeof value[key] === 'string';
+}
+
+/**
+ * Check if value has a number property
+ */
+export function hasNumberProperty<K extends string>(
+  value: unknown,
+  key: K
+): value is Record<K, number> {
+  return hasProperty(value, key) && typeof value[key] === 'number';
+}
+
+/**
+ * Check if value has a boolean property
+ */
+export function hasBooleanProperty<K extends string>(
+  value: unknown,
+  key: K
+): value is Record<K, boolean> {
+  return hasProperty(value, key) && typeof value[key] === 'boolean';
+}
+
+/**
+ * Check if value has an array property
+ */
+export function hasArrayProperty<K extends string>(
+  value: unknown,
+  key: K
+): value is Record<K, unknown[]> {
+  return hasProperty(value, key) && Array.isArray(value[key]);
+}
+
+/**
+ * Safely get a number property from an unknown value
+ * Returns undefined if value is not an object or property is not a number
+ */
+export function getNumberProperty(value: unknown, key: string): number | undefined {
+  if (!isPlainObject(value)) return undefined;
+  const prop = value[key];
+  return typeof prop === 'number' && Number.isFinite(prop) ? prop : undefined;
+}
+
+/**
+ * Safely get a string property from an unknown value
+ * Returns undefined if value is not an object or property is not a string
+ */
+export function getStringProperty(value: unknown, key: string): string | undefined {
+  if (!isPlainObject(value)) return undefined;
+  const prop = value[key];
+  return typeof prop === 'string' ? prop : undefined;
+}
+
+/**
+ * Safely get a boolean property from an unknown value
+ * Returns undefined if value is not an object or property is not a boolean
+ */
+export function getBooleanProperty(value: unknown, key: string): boolean | undefined {
+  if (!isPlainObject(value)) return undefined;
+  const prop = value[key];
+  return typeof prop === 'boolean' ? prop : undefined;
+}
+
+/**
+ * Check if value is a Codex/Gemini CLI wrapper response format
+ * { response: ..., stats?: ..., error?: ... }
+ */
+export function isCLIWrapperResponse(value: unknown): value is {
+  response?: unknown;
+  stats?: unknown;
+  error?: string | null;
+} {
+  if (!isPlainObject(value)) return false;
+  return 'response' in value || 'stats' in value || 'error' in value;
+}
+
+/**
+ * Check if error has timedOut property (from execa)
+ */
+export function isTimeoutError(error: unknown): error is { timedOut: true } {
+  return isPlainObject(error) && error.timedOut === true;
+}
+
+/**
+ * Check if error has exitCode property (from execa)
+ */
+export function isExitCodeError(error: unknown): error is {
+  exitCode: number;
+  stderr?: string;
+  stdout?: string;
+} {
+  return isPlainObject(error) && typeof error.exitCode === 'number';
+}

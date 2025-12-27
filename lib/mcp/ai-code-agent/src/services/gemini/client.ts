@@ -23,6 +23,12 @@ import {
 import { type Logger } from '../../core/logger.js';
 import type { TemplateEngineConfig } from '../../core/prompt-template.js';
 import { generateUUID, sanitizeParams } from '../../core/utils.js';
+import {
+  isTimeoutError,
+  isExitCodeError,
+  isCLIWrapperResponse,
+  isPlainObject,
+} from '../../core/validation.js';
 import type { WarningConfig } from '../../core/warnings.js';
 import { AnalysisResponseSchema, type AnalysisResponse } from '../../schemas/responses.js';
 import {
@@ -261,21 +267,15 @@ export class GeminiAnalysisService extends BaseAnalysisService {
       const stderr = result.stderr ?? '';
       return stderr !== '' ? stderr : '';
     } catch (error: unknown) {
-      const err = error as {
-        timedOut?: boolean;
-        exitCode?: number;
-        stderr?: string;
-        stdout?: string;
-      };
-
-      if (err.timedOut) {
+      // Use type guards for safe error handling
+      if (isTimeoutError(error)) {
         throw new TimeoutError(`Gemini CLI timed out after ${timeout}ms`);
       }
-      if (err.exitCode !== undefined && err.exitCode !== 0) {
-        throw new CLIExecutionError(`Gemini CLI exited with code ${err.exitCode}`, {
-          exitCode: err.exitCode,
-          stderr: err.stderr,
-          stdout: err.stdout,
+      if (isExitCodeError(error)) {
+        throw new CLIExecutionError(`Gemini CLI exited with code ${error.exitCode}`, {
+          exitCode: error.exitCode,
+          stderr: error.stderr,
+          stdout: error.stdout,
         });
       }
       throw new CLIExecutionError('Gemini CLI execution failed', { cause: error });
@@ -334,24 +334,23 @@ export class GeminiAnalysisService extends BaseAnalysisService {
       }
 
       // Handle Gemini wrapper format { response: ..., stats: ..., error: ... }
+      // Use type guard for safe wrapper detection and access
       let analysisData: unknown = parsed;
 
-      if (this.isGeminiWrapper(parsed)) {
-        const wrapper = parsed as { response?: unknown; error?: string | null };
-
-        if (wrapper.error) {
-          this.logger.error({ analysisId, error: wrapper.error }, 'Gemini CLI returned an error');
-          return this.createRawOutputResult(analysisId, cleaned, `Gemini error: ${wrapper.error}`);
+      if (isCLIWrapperResponse(parsed)) {
+        if (parsed.error) {
+          this.logger.error({ analysisId, error: parsed.error }, 'Gemini CLI returned an error');
+          return this.createRawOutputResult(analysisId, cleaned, `Gemini error: ${parsed.error}`);
         }
 
-        if (wrapper.response === null || wrapper.response === undefined) {
+        if (parsed.response === null || parsed.response === undefined) {
           return this.createRawOutputResult(analysisId, cleaned, 'Gemini response is null');
         }
 
         // If response is a string, parse it
-        if (typeof wrapper.response === 'string') {
+        if (typeof parsed.response === 'string') {
           try {
-            const responseText = wrapper.response
+            const responseText = parsed.response
               .replace(/^```(?:json|JSON)?\s*\n?/gm, '')
               .replace(/\n?```\s*$/gm, '')
               .trim();
@@ -360,7 +359,7 @@ export class GeminiAnalysisService extends BaseAnalysisService {
             return this.createRawOutputResult(analysisId, cleaned, 'Failed to parse response string');
           }
         } else {
-          analysisData = wrapper.response;
+          analysisData = parsed.response;
         }
       }
 
@@ -401,14 +400,5 @@ export class GeminiAnalysisService extends BaseAnalysisService {
 
       throw new ParseError('Failed to parse Gemini output', { cause: error });
     }
-  }
-
-  /**
-   * Check if parsed data is a Gemini CLI wrapper format
-   */
-  private isGeminiWrapper(data: unknown): boolean {
-    if (typeof data !== 'object' || data === null) return false;
-    const obj = data as Record<string, unknown>;
-    return 'response' in obj || 'stats' in obj || 'error' in obj;
   }
 }
