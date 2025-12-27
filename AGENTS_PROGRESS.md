@@ -1,5 +1,10 @@
 # Work Progress
 
+[x] Phase 10 PromptRegistry tests for ai-code-agent MCP (2025-12-27)
+    - Add 48 new tests: 700 total tests (up from 652)
+    - PromptRegistry: constructor, registerPrompts, all 5 prompt types
+    - Prompt builders: security, performance, style, general, bug-detection
+    - Coverage: prompts/registry 0% → 100%, overall 80.34% → 84.98%
 [x] Phase 9 ConfigManager tests for ai-code-agent MCP (2025-12-27)
     - Add 47 new tests: 652 total tests (up from 605)
     - ConfigManager: load, get, reset, update, environment overrides, deep merge
