@@ -1,5 +1,9 @@
 # Work Progress
 
+[x] Phase 6 handler tests for ai-code-agent MCP (2025-12-27)
+    - Add 25 new tests: 536 total tests (up from 511)
+    - CombinedAnalysisOrchestrator: parallel/sequential execution, caching, secret scanning
+    - Coverage: tools/handlers 41.77% → 93.35%, overall 66.41% → 68.89%
 [x] Phase 5 client tests for ai-code-agent MCP (2025-12-27)
     - Add 90 new tests: 511 total tests (up from 421)
     - Codex client: 44 tests for CLI execution, parsing, error handling, security
