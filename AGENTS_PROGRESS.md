@@ -1,5 +1,10 @@
 # Work Progress
 
+[x] Phase 11 Logger tests for ai-code-agent MCP (2025-12-27)
+    - Add 57 new tests: 757 total tests (up from 700)
+    - Logger: constructor, debug/info/warn/error, sanitization, child loggers
+    - Sanitization: sensitive keys, code snippets, nested objects
+    - Coverage: core/logger 10.14% → 98.55%, overall 84.98% → 86.81%
 [x] Phase 10 PromptRegistry tests for ai-code-agent MCP (2025-12-27)
     - Add 48 new tests: 700 total tests (up from 652)
     - PromptRegistry: constructor, registerPrompts, all 5 prompt types
