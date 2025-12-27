@@ -1,5 +1,10 @@
 # Work Progress
 
+[x] Phase 12 Utils tests for ai-code-agent MCP (2025-12-27)
+    - Add 75 new tests: 832 total tests (up from 757)
+    - Utils: generateUUID, generateHash, sanitizeParams, countLines
+    - Utils: detectLanguage, createTimeoutPromise, withTimeout, stripAnsiCodes
+    - Coverage: core/utils 43.10% → 100%, overall 86.81% → 87.80%
 [x] Phase 11 Logger tests for ai-code-agent MCP (2025-12-27)
     - Add 57 new tests: 757 total tests (up from 700)
     - Logger: constructor, debug/info/warn/error, sanitization, child loggers
