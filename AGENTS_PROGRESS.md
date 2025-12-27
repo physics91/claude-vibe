@@ -1,5 +1,9 @@
 # Work Progress
 
+[x] Phase 8 DatabaseManager tests for ai-code-agent MCP (2025-12-27)
+    - Add 35 new tests: 605 total tests (up from 570)
+    - DatabaseManager: singleton, migrations, health check, stats, path expansion
+    - Coverage: storage/database 0% → 97.27%, overall 73.40% → 75.00%
 [x] Phase 7 ToolRegistry tests for ai-code-agent MCP (2025-12-27)
     - Add 34 new tests: 570 total tests (up from 536)
     - ToolRegistry: executeAnalysis, handleCombinedAnalysis, buildCacheKeyParams
