@@ -5,6 +5,35 @@ All notable changes to the Claude Vibe plugin will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2025-12-27
+
+### New Features
+- **AI Code Agent MCP Integration**: Embedded ai-code-agent-mcp server for AI-powered code review
+  - Codex CLI and Gemini CLI integration
+  - Security audit with tilde path expansion fix
+  - SQLite caching for analysis results
+  - Secret detection and masking
+
+- **Enhanced Hook System**:
+  - UserPromptSubmit prompt-based hook for AGENTS.md context reinforcement
+  - Stop hook with code quality checks (ESLint, TypeScript, Prettier)
+  - Automatic blocking on lint/type errors, suggestions for formatting
+
+### Testing Improvements
+- **Stop Quality Gate Unit Tests**: 24 new tests
+  - `checkCodeQuality`: 10 tests (edge cases, malformed input, tool detection)
+  - `checkTestStatus`: 4 tests (failing/passing/malformed)
+  - `checkUncommittedChanges`: 1 test (non-git directory)
+  - `checkPendingTodos`: 1 test (placeholder behavior)
+  - `generateSuggestions`: 8 tests (all suggestion types)
+- Total plugin tests: 262 (up from 146)
+
+### Infrastructure
+- New `/cr` command for AI-powered code review
+- New `ai-code-reviewer` skill
+- MCP config schema validation
+- Build scripts for MCP server (PowerShell/Bash)
+
 ## [2.1.0] - 2025-12-16
 
 ### New Skills (4 new)
@@ -365,6 +394,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+[2.2.0]: https://github.com/physics91/claude-vibe/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/physics91/claude-vibe/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/physics91/claude-vibe/compare/v0.4.1...v2.0.0
 [0.4.1]: https://github.com/physics91/claude-vibe/compare/v0.4.0...v0.4.1
