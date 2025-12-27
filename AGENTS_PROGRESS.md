@@ -1,5 +1,9 @@
 # Work Progress
 
+[x] Phase 7 ToolRegistry tests for ai-code-agent MCP (2025-12-27)
+    - Add 34 new tests: 570 total tests (up from 536)
+    - ToolRegistry: executeAnalysis, handleCombinedAnalysis, buildCacheKeyParams
+    - Coverage: tools/registry 37.94% → 95.84%, overall 68.89% → 73.40%
 [x] Phase 6 handler tests for ai-code-agent MCP (2025-12-27)
     - Add 25 new tests: 536 total tests (up from 511)
     - CombinedAnalysisOrchestrator: parallel/sequential execution, caching, secret scanning
