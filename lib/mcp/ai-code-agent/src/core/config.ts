@@ -1,5 +1,6 @@
 /**
  * Configuration management with validation
+ * DRY: Uses deepMerge utility for recursive config merging
  */
 
 import { cosmiconfig } from 'cosmiconfig';
@@ -8,6 +9,7 @@ import defaultConfig from '../../config/default.json' assert { type: 'json' };
 import { ServerConfigSchema, type ServerConfig } from '../schemas/config.js';
 
 import { ConfigurationError } from './error-handler.js';
+import { deepMerge } from './utils.js';
 
 export class ConfigManager {
   private static instance: ConfigManager | null = null;
@@ -67,111 +69,16 @@ export class ConfigManager {
 
   /**
    * Merge two configuration objects
+   * DRY: Uses generic deepMerge utility for recursive merging
    */
   private static mergeConfig(
     base: Partial<ServerConfig>,
     override: Partial<ServerConfig>
   ): Partial<ServerConfig> {
-    const result: Partial<ServerConfig> = {};
-
-    // Merge server
-    if (base.server ?? override.server) {
-      result.server = { ...base.server, ...override.server } as ServerConfig['server'];
-    }
-
-    // Merge codex
-    if (base.codex ?? override.codex) {
-      result.codex = { ...base.codex, ...override.codex } as ServerConfig['codex'];
-    }
-
-    // Merge gemini
-    if (base.gemini ?? override.gemini) {
-      result.gemini = { ...base.gemini, ...override.gemini } as ServerConfig['gemini'];
-    }
-
-    // Merge analysis
-    if (base.analysis ?? override.analysis) {
-      result.analysis = {
-        ...base.analysis,
-        ...override.analysis,
-        deduplication: {
-          ...base.analysis?.deduplication,
-          ...override.analysis?.deduplication,
-        },
-      } as ServerConfig['analysis'];
-    }
-
-    // Merge retry
-    if (base.retry ?? override.retry) {
-      result.retry = { ...base.retry, ...override.retry } as ServerConfig['retry'];
-    }
-
-    // Merge logging
-    if (base.logging ?? override.logging) {
-      result.logging = {
-        ...base.logging,
-        ...override.logging,
-        file: {
-          ...base.logging?.file,
-          ...override.logging?.file,
-        },
-      } as ServerConfig['logging'];
-    }
-
-    // Merge cache
-    if (base.cache ?? override.cache) {
-      result.cache = { ...base.cache, ...override.cache } as ServerConfig['cache'];
-    }
-
-    // Merge secretScanning
-    if (base.secretScanning ?? override.secretScanning) {
-      result.secretScanning = {
-        ...base.secretScanning,
-        ...override.secretScanning,
-        patterns: {
-          ...base.secretScanning?.patterns,
-          ...override.secretScanning?.patterns,
-        },
-      } as ServerConfig['secretScanning'];
-    }
-
-    // Merge context
-    if (base.context ?? override.context) {
-      result.context = {
-        ...base.context,
-        ...override.context,
-        defaults: {
-          ...base.context?.defaults,
-          ...override.context?.defaults,
-        },
-        presets: {
-          ...base.context?.presets,
-          ...override.context?.presets,
-        },
-      } as ServerConfig['context'];
-    }
-
-    // Merge prompts
-    if (base.prompts ?? override.prompts) {
-      result.prompts = {
-        ...base.prompts,
-        ...override.prompts,
-        serviceTemplates: {
-          ...base.prompts?.serviceTemplates,
-          ...override.prompts?.serviceTemplates,
-        },
-      } as ServerConfig['prompts'];
-    }
-
-    // Merge warnings
-    if (base.warnings ?? override.warnings) {
-      result.warnings = {
-        ...base.warnings,
-        ...override.warnings,
-      } as ServerConfig['warnings'];
-    }
-
-    return result;
+    return deepMerge(
+      base as Record<string, unknown>,
+      override as Record<string, unknown>
+    ) as Partial<ServerConfig>;
   }
 
   /**

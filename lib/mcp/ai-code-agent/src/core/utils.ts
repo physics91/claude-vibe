@@ -142,3 +142,58 @@ export function stripAnsiCodes(value: string): string {
 
   return result;
 }
+
+/**
+ * Check if a value is a plain object (not null, not array, not Date, etc.)
+ */
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
+}
+
+/**
+ * Deep merge two objects
+ * DRY: Generic utility to replace repetitive manual merging
+ *
+ * Behavior:
+ * - Primitives: override replaces base
+ * - Arrays: override replaces base (no element-wise merge)
+ * - Objects: recursively merged
+ * - undefined/null in override: preserves base value
+ *
+ * @param base - Base object
+ * @param override - Object with values to override
+ * @returns Merged object
+ */
+export function deepMerge<T extends Record<string, unknown>>(
+  base: T,
+  override: Partial<T>
+): T {
+  const result = { ...base } as Record<string, unknown>;
+
+  for (const key of Object.keys(override)) {
+    const baseValue = result[key];
+    const overrideValue = override[key];
+
+    // Skip undefined/null overrides - preserve base value
+    if (overrideValue === undefined || overrideValue === null) {
+      continue;
+    }
+
+    // If both values are plain objects, recursively merge
+    if (isPlainObject(baseValue) && isPlainObject(overrideValue)) {
+      result[key] = deepMerge(
+        baseValue as Record<string, unknown>,
+        overrideValue as Record<string, unknown>
+      );
+    } else {
+      // Otherwise, override replaces base (including arrays)
+      result[key] = overrideValue;
+    }
+  }
+
+  return result as T;
+}

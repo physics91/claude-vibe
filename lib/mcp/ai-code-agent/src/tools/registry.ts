@@ -259,6 +259,130 @@ export class ToolRegistry {
     return value;
   }
 
+  /**
+   * Generic analysis execution
+   * DRY: Extracts common logic from handleCodexAnalysis and handleGeminiAnalysis
+   */
+  private async executeAnalysis(
+    args: unknown,
+    options: {
+      service: CodexAnalysisService | GeminiAnalysisService;
+      queue: PQueue;
+      source: 'codex' | 'gemini';
+      toolName: string;
+    }
+  ): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
+    const { config, logger } = this.dependencies;
+    const { service, queue, source, toolName } = options;
+
+    // Allow per-request maxCodeLength override
+    const maxCodeLength = this.getMaxCodeLengthOverride(args, config.analysis.maxCodeLength);
+    const schema = createCodeAnalysisParamsSchema(maxCodeLength);
+
+    // Validate with detailed error messages
+    const params = ValidationUtils.validateOrThrow(schema, args, toolName);
+
+    // Sanitize and warn about modifications
+    const { sanitized, warnings } = ValidationUtils.sanitizeParams(params);
+    if (warnings.length > 0) {
+      logger.warn({ warnings, analysisId: 'pre-validation' }, 'Input sanitization performed');
+    }
+
+    const finalParams = sanitized;
+
+    // Queue the analysis to control concurrency
+    const result = await queue.add(async () => {
+      // Generate analysisId FIRST, create status entry BEFORE calling service
+      const analysisId = `${source}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      this.analysisStatusStore.create(analysisId, source);
+      this.analysisStatusStore.updateStatus(analysisId, 'in_progress');
+
+      try {
+        const cacheKeyParams = this.buildCacheKeyParams(source, finalParams);
+        const cacheKeyShort = this.cacheService ? generateShortCacheKey(cacheKeyParams) : null;
+
+        const executeServiceAnalysis = async () => {
+          const result = await service.analyzeCode(finalParams);
+
+          // Integrate secret scanning results
+          if (config.secretScanning?.enabled) {
+            const secretFindings = this.secretScanner.scan(finalParams.prompt);
+            const secretAnalysisFindings = this.secretScanner.toAnalysisFindings(secretFindings);
+
+            if (secretAnalysisFindings.length > 0) {
+              result.findings = [...secretAnalysisFindings, ...result.findings];
+
+              for (const finding of secretAnalysisFindings) {
+                result.summary.totalFindings++;
+                if (finding.severity === 'critical') result.summary.critical++;
+                else if (finding.severity === 'high') result.summary.high++;
+                else if (finding.severity === 'medium') result.summary.medium++;
+                else if (finding.severity === 'low') result.summary.low++;
+              }
+
+              logger.debug(
+                { secretCount: secretAnalysisFindings.length, analysisId },
+                'Secret findings added to analysis'
+              );
+            }
+          }
+
+          return result;
+        };
+
+        const { result, fromCache } =
+          this.cacheService && this.cacheService.isEnabled()
+            ? await this.cacheService.getOrSet(cacheKeyParams, executeServiceAnalysis)
+            : { result: await executeServiceAnalysis(), fromCache: false };
+
+        // Override the generated analysisId with our tracked one
+        result.analysisId = analysisId;
+        result.timestamp = new Date().toISOString();
+        result.metadata.fromCache = fromCache;
+        if (cacheKeyShort) {
+          result.metadata.cacheKey = cacheKeyShort;
+        }
+
+        if (fromCache) {
+          logger.info({ analysisId, cacheKey: cacheKeyShort }, `${source} analysis served from cache`);
+        }
+
+        // Store result on success
+        this.analysisStatusStore.setResult(analysisId, result);
+
+        logger.info({ analysisId }, `${source} analysis completed successfully`);
+
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: formatAnalysisAsMarkdown(result, {
+                maxFindings: config.analysis.maxFindings,
+                maxCodeSnippetLength: config.analysis.maxCodeSnippetLength,
+                maxOutputChars: config.analysis.maxOutputChars,
+              }),
+            },
+          ],
+        };
+      } catch (error) {
+        // Store error on failure
+        const errorInfo = ErrorHandler.classifyError(error);
+        this.analysisStatusStore.setError(analysisId, {
+          code: errorInfo.code,
+          message: errorInfo.message,
+        });
+
+        throw error;
+      }
+    });
+
+    if (!result) {
+      throw new Error(`${source} analysis queue returned void`);
+    }
+
+    return result;
+  }
+
   private buildCacheKeyParams(
     source: 'codex' | 'gemini' | 'combined',
     params: { prompt: string; context?: Record<string, unknown>; options?: Record<string, unknown> }
@@ -416,259 +540,44 @@ export class ToolRegistry {
 
   /**
    * Handle Codex analysis tool
-   * CRITICAL FIX #3: Wire analysis status store operations
-   * CRITICAL FIX #4: Allow per-request maxCodeLength override
-   * MAJOR FIX #6: Honor per-request timeout option
-   * MAJOR FIX #7: Use queue for concurrency control
-   * ENHANCEMENT: Use enhanced validation with detailed error messages
+   * DRY: Uses generic executeAnalysis method
    */
   private async handleCodexAnalysis(
     args: unknown
   ): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
-    const { codexService, config, logger } = this.dependencies;
+    const { codexService } = this.dependencies;
 
     if (!codexService) {
       throw new Error('Codex service is not enabled');
     }
 
-    // CRITICAL FIX #4: Allow per-request maxCodeLength override via validation
-    // The schema itself still uses config default, but we validate against it
-    const maxCodeLength = this.getMaxCodeLengthOverride(args, config.analysis.maxCodeLength);
-    const schema = createCodeAnalysisParamsSchema(maxCodeLength);
-
-    // ENHANCEMENT: Validate with detailed error messages
-    const params = ValidationUtils.validateOrThrow(schema, args, 'analyze_code_with_codex');
-
-    // ENHANCEMENT: Sanitize and warn about modifications
-    const { sanitized, warnings } = ValidationUtils.sanitizeParams(params);
-    if (warnings.length > 0) {
-      logger.warn({ warnings, analysisId: 'pre-validation' }, 'Input sanitization performed');
-    }
-
-    // Use sanitized params
-    const finalParams = sanitized;
-
-    // Queue the analysis to control concurrency
-    const result = await this.codexQueue.add(async () => {
-      // CRITICAL FIX #3: Generate analysisId FIRST, create status entry BEFORE calling service
-      const analysisId = `codex-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-      this.analysisStatusStore.create(analysisId, 'codex');
-      this.analysisStatusStore.updateStatus(analysisId, 'in_progress');
-
-      try {
-        const cacheKeyParams = this.buildCacheKeyParams('codex', finalParams);
-        const cacheKeyShort = this.cacheService ? generateShortCacheKey(cacheKeyParams) : null;
-
-        const executeAnalysis = async () => {
-          const result = await codexService.analyzeCode(finalParams);
-
-          // Integrate secret scanning results
-          if (config.secretScanning?.enabled) {
-            const secretFindings = this.secretScanner.scan(finalParams.prompt);
-            const secretAnalysisFindings = this.secretScanner.toAnalysisFindings(secretFindings);
-
-            if (secretAnalysisFindings.length > 0) {
-              // Add secret findings to result
-              result.findings = [...secretAnalysisFindings, ...result.findings];
-
-              // Update summary counts
-              for (const finding of secretAnalysisFindings) {
-                result.summary.totalFindings++;
-                if (finding.severity === 'critical') result.summary.critical++;
-                else if (finding.severity === 'high') result.summary.high++;
-                else if (finding.severity === 'medium') result.summary.medium++;
-                else if (finding.severity === 'low') result.summary.low++;
-              }
-
-              logger.debug(
-                { secretCount: secretAnalysisFindings.length, analysisId },
-                'Secret findings added to analysis'
-              );
-            }
-          }
-
-          return result;
-        };
-
-        const { result, fromCache } =
-          this.cacheService && this.cacheService.isEnabled()
-            ? await this.cacheService.getOrSet(cacheKeyParams, executeAnalysis)
-            : { result: await executeAnalysis(), fromCache: false };
-
-        // Override the generated analysisId with our tracked one
-        result.analysisId = analysisId;
-        result.timestamp = new Date().toISOString();
-        result.metadata.fromCache = fromCache;
-        if (cacheKeyShort) {
-          result.metadata.cacheKey = cacheKeyShort;
-        }
-
-        if (fromCache) {
-          logger.info({ analysisId, cacheKey: cacheKeyShort }, 'Codex analysis served from cache');
-        }
-
-        // CRITICAL FIX #3: Store result on success
-        this.analysisStatusStore.setResult(analysisId, result);
-
-        logger.info({ analysisId }, 'Codex analysis completed successfully');
-
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: formatAnalysisAsMarkdown(result, {
-                maxFindings: config.analysis.maxFindings,
-                maxCodeSnippetLength: config.analysis.maxCodeSnippetLength,
-                maxOutputChars: config.analysis.maxOutputChars,
-              }),
-            },
-          ],
-        };
-      } catch (error) {
-        // CRITICAL FIX #3: Store error on failure (analysisId always exists now)
-        const errorInfo = ErrorHandler.classifyError(error);
-        this.analysisStatusStore.setError(analysisId, {
-          code: errorInfo.code,
-          message: errorInfo.message,
-        });
-
-        throw error;
-      }
+    return this.executeAnalysis(args, {
+      service: codexService,
+      queue: this.codexQueue,
+      source: 'codex',
+      toolName: 'analyze_code_with_codex',
     });
-
-    if (!result) {
-      throw new Error('Codex analysis queue returned void');
-    }
-
-    return result;
   }
 
   /**
    * Handle Gemini analysis tool
-   * CRITICAL FIX #3: Wire analysis status store operations
-   * CRITICAL FIX #4: Allow per-request maxCodeLength override
-   * MAJOR FIX #6: Honor per-request timeout and cliPath options
-   * MAJOR FIX #7: Use queue for concurrency control
-   * ENHANCEMENT: Use enhanced validation with detailed error messages
+   * DRY: Uses generic executeAnalysis method
    */
   private async handleGeminiAnalysis(
     args: unknown
   ): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
-    const { geminiService, config, logger } = this.dependencies;
+    const { geminiService } = this.dependencies;
 
     if (!geminiService) {
       throw new Error('Gemini service is not enabled');
     }
 
-    // CRITICAL FIX #4: Allow per-request maxCodeLength override
-    const maxCodeLength = this.getMaxCodeLengthOverride(args, config.analysis.maxCodeLength);
-    const schema = createCodeAnalysisParamsSchema(maxCodeLength);
-
-    // ENHANCEMENT: Validate with detailed error messages
-    const params = ValidationUtils.validateOrThrow(schema, args, 'analyze_code_with_gemini');
-
-    // ENHANCEMENT: Sanitize and warn about modifications
-    const { sanitized, warnings } = ValidationUtils.sanitizeParams(params);
-    if (warnings.length > 0) {
-      logger.warn({ warnings, analysisId: 'pre-validation' }, 'Input sanitization performed');
-    }
-
-    // Use sanitized params
-    const finalParams = sanitized;
-
-    // Queue the analysis to control concurrency
-    const result = await this.geminiQueue.add(async () => {
-      // CRITICAL FIX #3: Generate analysisId FIRST, create status entry BEFORE calling service
-      const analysisId = `gemini-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-      this.analysisStatusStore.create(analysisId, 'gemini');
-      this.analysisStatusStore.updateStatus(analysisId, 'in_progress');
-
-      try {
-        const cacheKeyParams = this.buildCacheKeyParams('gemini', finalParams);
-        const cacheKeyShort = this.cacheService ? generateShortCacheKey(cacheKeyParams) : null;
-
-        const executeAnalysis = async () => {
-          const result = await geminiService.analyzeCode(finalParams);
-
-          // Integrate secret scanning results
-          if (config.secretScanning?.enabled) {
-            const secretFindings = this.secretScanner.scan(finalParams.prompt);
-            const secretAnalysisFindings = this.secretScanner.toAnalysisFindings(secretFindings);
-
-            if (secretAnalysisFindings.length > 0) {
-              // Add secret findings to result
-              result.findings = [...secretAnalysisFindings, ...result.findings];
-
-              // Update summary counts
-              for (const finding of secretAnalysisFindings) {
-                result.summary.totalFindings++;
-                if (finding.severity === 'critical') result.summary.critical++;
-                else if (finding.severity === 'high') result.summary.high++;
-                else if (finding.severity === 'medium') result.summary.medium++;
-                else if (finding.severity === 'low') result.summary.low++;
-              }
-
-              logger.debug(
-                { secretCount: secretAnalysisFindings.length, analysisId },
-                'Secret findings added to analysis'
-              );
-            }
-          }
-
-          return result;
-        };
-
-        const { result, fromCache } =
-          this.cacheService && this.cacheService.isEnabled()
-            ? await this.cacheService.getOrSet(cacheKeyParams, executeAnalysis)
-            : { result: await executeAnalysis(), fromCache: false };
-
-        // Override the generated analysisId with our tracked one
-        result.analysisId = analysisId;
-        result.timestamp = new Date().toISOString();
-        result.metadata.fromCache = fromCache;
-        if (cacheKeyShort) {
-          result.metadata.cacheKey = cacheKeyShort;
-        }
-
-        if (fromCache) {
-          logger.info({ analysisId, cacheKey: cacheKeyShort }, 'Gemini analysis served from cache');
-        }
-
-        // CRITICAL FIX #3: Store result on success
-        this.analysisStatusStore.setResult(analysisId, result);
-
-        logger.info({ analysisId }, 'Gemini analysis completed successfully');
-
-        return {
-          content: [
-            {
-              type: 'text' as const,
-              text: formatAnalysisAsMarkdown(result, {
-                maxFindings: config.analysis.maxFindings,
-                maxCodeSnippetLength: config.analysis.maxCodeSnippetLength,
-                maxOutputChars: config.analysis.maxOutputChars,
-              }),
-            },
-          ],
-        };
-      } catch (error) {
-        // CRITICAL FIX #3: Store error on failure (analysisId always exists now)
-        const errorInfo = ErrorHandler.classifyError(error);
-        this.analysisStatusStore.setError(analysisId, {
-          code: errorInfo.code,
-          message: errorInfo.message,
-        });
-
-        throw error;
-      }
+    return this.executeAnalysis(args, {
+      service: geminiService,
+      queue: this.geminiQueue,
+      source: 'gemini',
+      toolName: 'analyze_code_with_gemini',
     });
-
-    if (!result) {
-      throw new Error('Gemini analysis queue returned void');
-    }
-
-    return result;
   }
 
   /**

@@ -1,5 +1,6 @@
 /**
  * Response validation schemas for AI services
+ * DRY: Unified schema for all AI analysis responses
  */
 
 import { z } from 'zod';
@@ -7,45 +8,42 @@ import { z } from 'zod';
 import { FindingTypeSchema, SeveritySchema } from './tools.js';
 
 /**
- * Codex Response Schema
- * Validates responses from the Codex MCP tool
+ * Finding schema - shared by all analysis services
  */
-export const CodexResponseSchema = z.object({
-  findings: z.array(
-    z.object({
-      type: FindingTypeSchema,
-      severity: SeveritySchema,
-      line: z.number().nullable(),
-      title: z.string().min(1),
-      description: z.string().min(1),
-      suggestion: z.string().optional(),
-      code: z.string().optional(),
-    })
-  ),
-  overallAssessment: z.string().min(1),
-  recommendations: z.array(z.string()).optional(),
+export const AnalysisFindingSchema = z.object({
+  type: FindingTypeSchema,
+  severity: SeveritySchema,
+  line: z.number().nullable(),
+  title: z.string().min(1),
+  description: z.string().min(1),
+  suggestion: z.string().optional(),
+  code: z.string().optional(),
 });
 
-export type CodexResponse = z.infer<typeof CodexResponseSchema>;
+export type AnalysisFinding = z.infer<typeof AnalysisFindingSchema>;
 
 /**
- * Gemini Response Schema
- * Validates responses from the Gemini CLI
+ * Unified Analysis Response Schema
+ * Used by both Codex and Gemini services
  */
-export const GeminiResponseSchema = z.object({
-  findings: z.array(
-    z.object({
-      type: FindingTypeSchema,
-      severity: SeveritySchema,
-      line: z.number().nullable(),
-      title: z.string().min(1),
-      description: z.string().min(1),
-      suggestion: z.string().optional(),
-      code: z.string().optional(),
-    })
-  ),
+export const AnalysisResponseSchema = z.object({
+  findings: z.array(AnalysisFindingSchema),
   overallAssessment: z.string().min(1),
   recommendations: z.array(z.string()).optional(),
 });
 
-export type GeminiResponse = z.infer<typeof GeminiResponseSchema>;
+export type AnalysisResponse = z.infer<typeof AnalysisResponseSchema>;
+
+/**
+ * @deprecated Use AnalysisResponseSchema instead
+ * Kept for backward compatibility
+ */
+export const CodexResponseSchema = AnalysisResponseSchema;
+export type CodexResponse = AnalysisResponse;
+
+/**
+ * @deprecated Use AnalysisResponseSchema instead
+ * Kept for backward compatibility
+ */
+export const GeminiResponseSchema = AnalysisResponseSchema;
+export type GeminiResponse = AnalysisResponse;
