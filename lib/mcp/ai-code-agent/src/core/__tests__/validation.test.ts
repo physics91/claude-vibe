@@ -376,5 +376,607 @@ describe('ValidationUtils', () => {
 
       expect(params).toEqual(original);
     });
+
+    it('should coerce parallelExecution string to boolean', () => {
+      const params = {
+        prompt: 'test',
+        options: {
+          parallelExecution: 'true',
+        },
+      };
+
+      const { sanitized, warnings } = ValidationUtils.sanitizeParams(params);
+
+      expect(sanitized.options?.parallelExecution).toBe(true);
+      expect(warnings).toContain("Converted parallelExecution 'true' to boolean");
+    });
+
+    it('should coerce parallelExecution string false to boolean', () => {
+      const params = {
+        prompt: 'test',
+        options: {
+          parallelExecution: 'false',
+        },
+      };
+
+      const { sanitized, warnings } = ValidationUtils.sanitizeParams(params);
+
+      expect(sanitized.options?.parallelExecution).toBe(false);
+      expect(warnings).toContain("Converted parallelExecution 'false' to boolean");
+    });
+
+    it('should coerce includeIndividualReviews string to boolean', () => {
+      const params = {
+        prompt: 'test',
+        options: {
+          includeIndividualReviews: 'TRUE',
+        },
+      };
+
+      const { sanitized, warnings } = ValidationUtils.sanitizeParams(params);
+
+      expect(sanitized.options?.includeIndividualReviews).toBe(true);
+      expect(warnings).toContain("Converted includeIndividualReviews 'true' to boolean");
+    });
+
+    it('should coerce includeIndividualReviews string false to boolean', () => {
+      const params = {
+        prompt: 'test',
+        options: {
+          includeIndividualReviews: 'FALSE',
+        },
+      };
+
+      const { sanitized, warnings } = ValidationUtils.sanitizeParams(params);
+
+      expect(sanitized.options?.includeIndividualReviews).toBe(false);
+      expect(warnings).toContain("Converted includeIndividualReviews 'false' to boolean");
+    });
+
+    it('should normalize severity to lowercase', () => {
+      const params = {
+        prompt: 'test',
+        options: {
+          severity: 'HIGH',
+        },
+      };
+
+      const { sanitized, warnings } = ValidationUtils.sanitizeParams(params);
+
+      expect(sanitized.options?.severity).toBe('high');
+      expect(warnings.some(w => w.includes('Normalized severity'))).toBe(true);
+    });
+
+    it('should sanitize reviewId', () => {
+      const params = {
+        reviewId: '  test-id  ',
+      };
+
+      const { sanitized, warnings } = ValidationUtils.sanitizeParams(params);
+
+      expect(sanitized.reviewId).toBe('test-id');
+      expect(warnings).toContain('Removed whitespace from reviewId');
+    });
+
+    it('should remove control characters from reviewId', () => {
+      const params = {
+        reviewId: 'test\x00\x01id',
+      };
+
+      const { sanitized, warnings } = ValidationUtils.sanitizeParams(params);
+
+      expect(sanitized.reviewId).toBe('testid');
+      expect(warnings).toContain('Removed control characters from reviewId');
+    });
+
+    it('should remove control characters from cliPath', () => {
+      const params = {
+        prompt: 'test',
+        options: {
+          cliPath: '/usr\x00/bin/codex',
+        },
+      };
+
+      const { sanitized, warnings } = ValidationUtils.sanitizeParams(params);
+
+      expect(sanitized.options?.cliPath).toBe('/usr/bin/codex');
+      expect(warnings).toContain('Removed control characters from cliPath');
+    });
+
+    it('should remove control characters from prompt but keep newlines and tabs', () => {
+      const params = {
+        prompt: 'line1\n\tline2\x00\x01\x02end',
+      };
+
+      const { sanitized, warnings } = ValidationUtils.sanitizeParams(params);
+
+      expect(sanitized.prompt).toBe('line1\n\tline2end');
+      expect(warnings.some(w => w.includes('control characters from prompt'))).toBe(true);
+    });
+
+    it('should warn about invalid timeout (Infinity)', () => {
+      const params = {
+        prompt: 'test',
+        options: {
+          timeout: Infinity,
+        },
+      };
+
+      const { warnings } = ValidationUtils.sanitizeParams(params);
+
+      expect(warnings).toContain('Invalid timeout value (NaN or Infinity) - validation will fail');
+    });
+
+    it('should handle options without sensitive fields', () => {
+      const params = {
+        prompt: 'test',
+        options: {
+          debug: true,
+        },
+      };
+
+      const { sanitized, warnings } = ValidationUtils.sanitizeParams(params);
+
+      expect(sanitized.options?.debug).toBe(true);
+      expect(warnings).toHaveLength(0);
+    });
+  });
+
+  describe('validate edge cases', () => {
+    it('should handle non-ZodError thrown during validation', () => {
+      // Create a schema that throws a regular error during refinement
+      const schema = z.object({
+        value: z.string(),
+      });
+
+      // Non-Zod errors are caught and handled
+      const result = ValidationUtils.validate(schema, { value: 123 });
+
+      expect(result.success).toBe(false);
+    });
+
+    it('should handle empty field path for input-level errors', () => {
+      const schema = z.string();
+
+      const result = ValidationUtils.validate(schema, 123);
+
+      expect(result.success).toBe(false);
+      expect(result.error?.fields[0].field).toBe('input');
+    });
+
+    it('should handle array length validation', () => {
+      const schema = z.object({
+        items: z.array(z.string()).min(2).max(5),
+      });
+
+      const result1 = ValidationUtils.validate(schema, { items: ['one'] });
+      expect(result1.success).toBe(false);
+      expect(result1.error?.fields[0].error).toContain('at least 2 items');
+
+      const result2 = ValidationUtils.validate(schema, { items: ['1', '2', '3', '4', '5', '6'] });
+      expect(result2.success).toBe(false);
+      expect(result2.error?.fields[0].error).toContain('exceeds maximum of 5 items');
+    });
+
+    it('should handle email validation', () => {
+      const schema = z.object({
+        email: z.string().email(),
+      });
+
+      const result = ValidationUtils.validate(schema, { email: 'invalid' });
+
+      expect(result.success).toBe(false);
+      expect(result.error?.fields[0].error).toContain('valid email address');
+    });
+
+    it('should handle URL validation', () => {
+      const schema = z.object({
+        url: z.string().url(),
+      });
+
+      const result = ValidationUtils.validate(schema, { url: 'not-a-url' });
+
+      expect(result.success).toBe(false);
+      expect(result.error?.fields[0].error).toContain('valid URL');
+    });
+
+    it('should handle regex validation', () => {
+      const schema = z.object({
+        code: z.string().regex(/^[A-Z]{3}-\d{3}$/),
+      });
+
+      const result = ValidationUtils.validate(schema, { code: 'abc-123' });
+
+      expect(result.success).toBe(false);
+      expect(result.error?.fields[0].error).toContain('required pattern');
+    });
+
+    it('should handle too_big on strings', () => {
+      const schema = z.object({
+        name: z.string().max(10),
+      });
+
+      const result = ValidationUtils.validate(schema, { name: 'verylongname' });
+
+      expect(result.success).toBe(false);
+      expect(result.error?.fields[0].error).toContain('exceeds maximum length');
+    });
+
+    it('should provide suggestions for timeout errors', () => {
+      const schema = z.object({
+        options: z.object({
+          timeout: z.number().min(0),
+        }),
+      });
+
+      const result = ValidationUtils.validate(schema, { options: { timeout: -1 } });
+
+      expect(result.success).toBe(false);
+      expect(result.error?.suggestions.some(s => s.includes('Timeout'))).toBe(true);
+    });
+
+    it('should provide suggestions for cliPath errors', () => {
+      const schema = z.object({
+        options: z.object({
+          cliPath: z.string().min(1),
+        }),
+      });
+
+      const result = ValidationUtils.validate(schema, { options: { cliPath: '' } });
+
+      expect(result.success).toBe(false);
+      expect(result.error?.suggestions.some(s => s.includes('CLI path'))).toBe(true);
+    });
+  });
+
+  describe('formatErrorMessage edge cases', () => {
+    it('should handle empty fields array', () => {
+      const error = {
+        message: 'Validation failed',
+        fields: [],
+        suggestions: ['Check input'],
+      };
+
+      const formatted = ValidationUtils.formatErrorMessage(error);
+
+      expect(formatted).toContain('Validation failed');
+      expect(formatted).toContain('Suggestions:');
+      expect(formatted).not.toContain('Field Details:');
+    });
+
+    it('should handle undefined field value', () => {
+      const error = {
+        message: 'Validation error',
+        fields: [
+          {
+            field: 'missing',
+            value: undefined,
+            error: 'Field is required',
+          },
+        ],
+        suggestions: [],
+      };
+
+      const formatted = ValidationUtils.formatErrorMessage(error);
+
+      expect(formatted).toContain('Field is required');
+      expect(formatted).not.toContain('Received:');
+    });
+
+    it('should handle null field value', () => {
+      const error = {
+        message: 'Validation error',
+        fields: [
+          {
+            field: 'nullField',
+            value: null,
+            error: 'Field cannot be null',
+          },
+        ],
+        suggestions: [],
+      };
+
+      const formatted = ValidationUtils.formatErrorMessage(error);
+
+      expect(formatted).toContain('Field cannot be null');
+      expect(formatted).not.toContain('Received:');
+    });
+
+    it('should handle complex object value', () => {
+      const error = {
+        message: 'Validation error',
+        fields: [
+          {
+            field: 'complex',
+            value: { nested: { deep: 'value' } },
+            error: 'Invalid object',
+          },
+        ],
+        suggestions: [],
+      };
+
+      const formatted = ValidationUtils.formatErrorMessage(error);
+
+      expect(formatted).toContain('Received:');
+      expect(formatted).toContain('nested');
+    });
+
+    it('should handle ANSI escape sequences in values', () => {
+      const error = {
+        message: 'Validation error',
+        fields: [
+          {
+            field: 'prompt',
+            value: '\x1b[31mred text\x1b[0m',
+            error: 'Invalid prompt',
+          },
+        ],
+        suggestions: [],
+      };
+
+      const formatted = ValidationUtils.formatErrorMessage(error);
+
+      // Control characters should be escaped
+      expect(formatted).toContain('\\x1b');
+    });
+  });
+});
+
+import {
+  isPlainObject,
+  isRecord,
+  hasProperty,
+  hasStringProperty,
+  hasNumberProperty,
+  hasBooleanProperty,
+  hasArrayProperty,
+  getNumberProperty,
+  getStringProperty,
+  getBooleanProperty,
+  isCLIWrapperResponse,
+  isTimeoutError,
+  isExitCodeError,
+} from '../validation.js';
+
+describe('Type Guards', () => {
+  describe('isPlainObject', () => {
+    it('should return true for plain objects', () => {
+      expect(isPlainObject({})).toBe(true);
+      expect(isPlainObject({ key: 'value' })).toBe(true);
+    });
+
+    it('should return false for null', () => {
+      expect(isPlainObject(null)).toBe(false);
+    });
+
+    it('should return false for arrays', () => {
+      expect(isPlainObject([])).toBe(false);
+      expect(isPlainObject([1, 2, 3])).toBe(false);
+    });
+
+    it('should return false for primitives', () => {
+      expect(isPlainObject('string')).toBe(false);
+      expect(isPlainObject(123)).toBe(false);
+      expect(isPlainObject(true)).toBe(false);
+      expect(isPlainObject(undefined)).toBe(false);
+    });
+  });
+
+  describe('isRecord', () => {
+    it('should return true for plain objects', () => {
+      expect(isRecord({})).toBe(true);
+      expect(isRecord({ a: 1 })).toBe(true);
+    });
+
+    it('should return false for non-objects', () => {
+      expect(isRecord(null)).toBe(false);
+      expect(isRecord([])).toBe(false);
+      expect(isRecord('string')).toBe(false);
+    });
+  });
+
+  describe('hasProperty', () => {
+    it('should return true if property exists', () => {
+      expect(hasProperty({ name: 'test' }, 'name')).toBe(true);
+    });
+
+    it('should return true even if property value is undefined', () => {
+      expect(hasProperty({ name: undefined }, 'name')).toBe(true);
+    });
+
+    it('should return false if property does not exist', () => {
+      expect(hasProperty({}, 'name')).toBe(false);
+    });
+
+    it('should return false for non-objects', () => {
+      expect(hasProperty(null, 'name')).toBe(false);
+      expect(hasProperty('string', 'length')).toBe(false);
+    });
+  });
+
+  describe('hasStringProperty', () => {
+    it('should return true if property is a string', () => {
+      expect(hasStringProperty({ name: 'test' }, 'name')).toBe(true);
+    });
+
+    it('should return false if property is not a string', () => {
+      expect(hasStringProperty({ name: 123 }, 'name')).toBe(false);
+      expect(hasStringProperty({ name: null }, 'name')).toBe(false);
+    });
+
+    it('should return false if property does not exist', () => {
+      expect(hasStringProperty({}, 'name')).toBe(false);
+    });
+  });
+
+  describe('hasNumberProperty', () => {
+    it('should return true if property is a number', () => {
+      expect(hasNumberProperty({ age: 25 }, 'age')).toBe(true);
+      expect(hasNumberProperty({ value: 0 }, 'value')).toBe(true);
+    });
+
+    it('should return false if property is not a number', () => {
+      expect(hasNumberProperty({ age: '25' }, 'age')).toBe(false);
+    });
+
+    it('should return false for non-objects', () => {
+      expect(hasNumberProperty(null, 'age')).toBe(false);
+    });
+  });
+
+  describe('hasBooleanProperty', () => {
+    it('should return true if property is a boolean', () => {
+      expect(hasBooleanProperty({ active: true }, 'active')).toBe(true);
+      expect(hasBooleanProperty({ active: false }, 'active')).toBe(true);
+    });
+
+    it('should return false if property is not a boolean', () => {
+      expect(hasBooleanProperty({ active: 'true' }, 'active')).toBe(false);
+      expect(hasBooleanProperty({ active: 1 }, 'active')).toBe(false);
+    });
+  });
+
+  describe('hasArrayProperty', () => {
+    it('should return true if property is an array', () => {
+      expect(hasArrayProperty({ items: [] }, 'items')).toBe(true);
+      expect(hasArrayProperty({ items: [1, 2, 3] }, 'items')).toBe(true);
+    });
+
+    it('should return false if property is not an array', () => {
+      expect(hasArrayProperty({ items: 'not array' }, 'items')).toBe(false);
+      expect(hasArrayProperty({ items: {} }, 'items')).toBe(false);
+    });
+  });
+
+  describe('getNumberProperty', () => {
+    it('should return number for valid number property', () => {
+      expect(getNumberProperty({ count: 10 }, 'count')).toBe(10);
+      expect(getNumberProperty({ count: 0 }, 'count')).toBe(0);
+      expect(getNumberProperty({ count: -5 }, 'count')).toBe(-5);
+    });
+
+    it('should return undefined for NaN or Infinity', () => {
+      expect(getNumberProperty({ count: NaN }, 'count')).toBeUndefined();
+      expect(getNumberProperty({ count: Infinity }, 'count')).toBeUndefined();
+    });
+
+    it('should return undefined for non-number property', () => {
+      expect(getNumberProperty({ count: '10' }, 'count')).toBeUndefined();
+    });
+
+    it('should return undefined for non-object', () => {
+      expect(getNumberProperty(null, 'count')).toBeUndefined();
+      expect(getNumberProperty('string', 'length')).toBeUndefined();
+    });
+  });
+
+  describe('getStringProperty', () => {
+    it('should return string for valid string property', () => {
+      expect(getStringProperty({ name: 'test' }, 'name')).toBe('test');
+      expect(getStringProperty({ name: '' }, 'name')).toBe('');
+    });
+
+    it('should return undefined for non-string property', () => {
+      expect(getStringProperty({ name: 123 }, 'name')).toBeUndefined();
+    });
+
+    it('should return undefined for non-object', () => {
+      expect(getStringProperty(null, 'name')).toBeUndefined();
+    });
+  });
+
+  describe('getBooleanProperty', () => {
+    it('should return boolean for valid boolean property', () => {
+      expect(getBooleanProperty({ active: true }, 'active')).toBe(true);
+      expect(getBooleanProperty({ active: false }, 'active')).toBe(false);
+    });
+
+    it('should return undefined for non-boolean property', () => {
+      expect(getBooleanProperty({ active: 'true' }, 'active')).toBeUndefined();
+    });
+
+    it('should return undefined for non-object', () => {
+      expect(getBooleanProperty(null, 'active')).toBeUndefined();
+    });
+  });
+
+  describe('isCLIWrapperResponse', () => {
+    it('should return true for response with response field', () => {
+      expect(isCLIWrapperResponse({ response: {} })).toBe(true);
+    });
+
+    it('should return true for response with stats field', () => {
+      expect(isCLIWrapperResponse({ stats: {} })).toBe(true);
+    });
+
+    it('should return true for response with error field', () => {
+      expect(isCLIWrapperResponse({ error: 'some error' })).toBe(true);
+      expect(isCLIWrapperResponse({ error: null })).toBe(true);
+    });
+
+    it('should return true for combined fields', () => {
+      expect(isCLIWrapperResponse({ response: {}, stats: {}, error: null })).toBe(true);
+    });
+
+    it('should return false for non-objects', () => {
+      expect(isCLIWrapperResponse(null)).toBe(false);
+      expect(isCLIWrapperResponse('string')).toBe(false);
+      expect(isCLIWrapperResponse([])).toBe(false);
+    });
+
+    it('should return false for empty object', () => {
+      expect(isCLIWrapperResponse({})).toBe(false);
+    });
+  });
+
+  describe('isTimeoutError', () => {
+    it('should return true for timedOut: true', () => {
+      expect(isTimeoutError({ timedOut: true })).toBe(true);
+    });
+
+    it('should return false for timedOut: false', () => {
+      expect(isTimeoutError({ timedOut: false })).toBe(false);
+    });
+
+    it('should return false for non-objects', () => {
+      expect(isTimeoutError(null)).toBe(false);
+      expect(isTimeoutError('string')).toBe(false);
+    });
+
+    it('should return false for objects without timedOut', () => {
+      expect(isTimeoutError({})).toBe(false);
+      expect(isTimeoutError({ error: 'timeout' })).toBe(false);
+    });
+  });
+
+  describe('isExitCodeError', () => {
+    it('should return true for error with exitCode number', () => {
+      expect(isExitCodeError({ exitCode: 1 })).toBe(true);
+      expect(isExitCodeError({ exitCode: 0 })).toBe(true);
+      expect(isExitCodeError({ exitCode: -1 })).toBe(true);
+    });
+
+    it('should return true for error with exitCode, stderr, and stdout', () => {
+      expect(
+        isExitCodeError({
+          exitCode: 1,
+          stderr: 'error output',
+          stdout: 'standard output',
+        })
+      ).toBe(true);
+    });
+
+    it('should return false for non-number exitCode', () => {
+      expect(isExitCodeError({ exitCode: '1' })).toBe(false);
+    });
+
+    it('should return false for non-objects', () => {
+      expect(isExitCodeError(null)).toBe(false);
+      expect(isExitCodeError('string')).toBe(false);
+    });
+
+    it('should return false for objects without exitCode', () => {
+      expect(isExitCodeError({})).toBe(false);
+    });
   });
 });

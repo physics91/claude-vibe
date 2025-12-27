@@ -1,5 +1,25 @@
 # Work Progress
 
+[x] Phase 18 WarningSystem and AnalysisStatusStore tests for ai-code-agent MCP (2025-12-27)
+    - Add 65 new tests: 1142 total tests (up from 1077)
+    - WarningSystem: checkContext, formatWarnings, suppress/unsuppress
+    - AnalysisStatusStore: singleton, CRUD operations, TTL expiration
+    - Coverage: warnings.ts 76.61% → 100%, store.ts 78.02% → 87.91%, overall 92.15% → 92.72%
+[x] Phase 17 ContextAutoDetector tests for ai-code-agent MCP (2025-12-27)
+    - Add 69 new tests: 1077 total tests (up from 1008)
+    - ContextAutoDetector: platform/language/framework detection, package.json parsing
+    - detectLanguageFromCode: TypeScript, Python, Go, Rust, Java patterns
+    - Coverage: core/auto-detect 73.36% → 99.18%, overall 91.21% → 92.15%
+[x] Phase 16 ValidationUtils type guards tests for ai-code-agent MCP (2025-12-27)
+    - Add 70 new tests: 1008 total tests (up from 938)
+    - Type guards: isPlainObject, hasProperty, getNumberProperty, etc.
+    - sanitizeParams: boolean coercion, severity normalization, control chars
+    - Coverage: core/validation 72.31% → 90.12%, overall 89.70% → 91.21%
+[x] Phase 15 ContextManager tests for ai-code-agent MCP (2025-12-27)
+    - Add 42 new tests: 938 total tests (up from 896)
+    - ContextManager: constructor, resolve priority, preset management
+    - Custom fields deep merge, createContextManager factory
+    - Coverage: core/context-manager 57.33% → 100%, overall 89.22% → 89.70%
 [x] Phase 14 PromptTemplateEngine tests for ai-code-agent MCP (2025-12-27)
     - Add 42 new tests: 896 total tests (up from 854)
     - PromptTemplateEngine: render, buildContextSection, evaluateSections
