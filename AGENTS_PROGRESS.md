@@ -1,5 +1,10 @@
 # Work Progress
 
+[x] Phase 14 PromptTemplateEngine tests for ai-code-agent MCP (2025-12-27)
+    - Add 42 new tests: 896 total tests (up from 854)
+    - PromptTemplateEngine: render, buildContextSection, evaluateSections
+    - Threat model guidelines, conditional sections, template management
+    - Coverage: core/prompt-template 54.49% → 100%, overall 88.08% → 89.22%
 [x] Phase 13 RetryManager tests for ai-code-agent MCP (2025-12-27)
     - Add 22 new tests: 854 total tests (up from 832)
     - RetryManager: execute with retry, exponential backoff, max delay cap
