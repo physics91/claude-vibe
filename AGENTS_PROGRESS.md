@@ -1,5 +1,11 @@
 # Work Progress
 
+[x] Phase 5 client tests for ai-code-agent MCP (2025-12-27)
+    - Add 90 new tests: 511 total tests (up from 421)
+    - Codex client: 44 tests for CLI execution, parsing, error handling, security
+    - Gemini client: 46 tests for CLI execution, parsing, wrapper format, security
+    - Tests cover: analyzeCode, buildCLIArgs, parseResponse, executeCLI, healthCheck
+    - Security: CLI path validation, whitelist enforcement, dangerous arg filtering
 [x] Phase 4 integration tests for ai-code-agent MCP (2025-12-27)
     - Add 227 new tests: 421 total tests (up from 194)
     - Aggregator: 30 tests for deduplication, similarity, confidence, merging (92% coverage)
