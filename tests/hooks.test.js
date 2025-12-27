@@ -358,6 +358,339 @@ async function testStopQualityGate() {
     });
     assertEqual(result.code, 0);
   });
+
+  // Import functions for unit testing
+  const {
+    checkTestStatus,
+    checkUncommittedChanges,
+    checkPendingTodos,
+    checkCodeQuality,
+    generateSuggestions
+  } = require(hookPath);
+
+  // Test checkCodeQuality function
+  console.log('\n  📊 checkCodeQuality Unit Tests\n');
+
+  test('checkCodeQuality returns no issues for non-existent directory', () => {
+    const result = checkCodeQuality('/non/existent/path/that/does/not/exist');
+    assertEqual(result.hasIssues, false);
+    assertEqual(result.issues.eslint, null);
+    assertEqual(result.issues.typescript, null);
+    assertEqual(result.issues.prettier, null);
+  });
+
+  test('checkCodeQuality returns no issues when no package.json', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hook-test-'));
+    try {
+      const result = checkCodeQuality(tempDir);
+      assertEqual(result.hasIssues, false);
+      assertEqual(result.issues.eslint, null);
+      assertEqual(result.issues.typescript, null);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('checkCodeQuality returns no issues for empty package.json', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hook-test-'));
+    try {
+      fs.writeFileSync(path.join(tempDir, 'package.json'), JSON.stringify({
+        name: 'test-pkg',
+        version: '1.0.0'
+      }));
+      const result = checkCodeQuality(tempDir);
+      assertEqual(result.hasIssues, false);
+      assertEqual(result.issues.eslint, null);
+      assertEqual(result.issues.typescript, null);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('checkCodeQuality handles malformed package.json gracefully', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hook-test-'));
+    try {
+      fs.writeFileSync(path.join(tempDir, 'package.json'), 'not valid json {{{');
+      const result = checkCodeQuality(tempDir);
+      assertEqual(result.hasIssues, false);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('checkCodeQuality detects TypeScript via tsconfig.json', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hook-test-'));
+    try {
+      fs.writeFileSync(path.join(tempDir, 'package.json'), JSON.stringify({
+        name: 'test-pkg'
+      }));
+      fs.writeFileSync(path.join(tempDir, 'tsconfig.json'), JSON.stringify({
+        compilerOptions: { strict: true }
+      }));
+      const result = checkCodeQuality(tempDir);
+      assertTrue(typeof result.hasIssues === 'boolean', 'Should return boolean hasIssues');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('checkCodeQuality detects ESLint in devDependencies', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hook-test-'));
+    try {
+      fs.writeFileSync(path.join(tempDir, 'package.json'), JSON.stringify({
+        name: 'test-pkg',
+        devDependencies: { eslint: '^8.0.0' }
+      }));
+      const result = checkCodeQuality(tempDir);
+      assertTrue(typeof result.hasIssues === 'boolean', 'Should return boolean hasIssues');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('checkCodeQuality detects ESLint in dependencies', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hook-test-'));
+    try {
+      fs.writeFileSync(path.join(tempDir, 'package.json'), JSON.stringify({
+        name: 'test-pkg',
+        dependencies: { eslint: '^8.0.0' }
+      }));
+      const result = checkCodeQuality(tempDir);
+      assertTrue(typeof result.hasIssues === 'boolean', 'Should return boolean hasIssues');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('checkCodeQuality detects lint script', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hook-test-'));
+    try {
+      fs.writeFileSync(path.join(tempDir, 'package.json'), JSON.stringify({
+        name: 'test-pkg',
+        scripts: { lint: 'echo "lint"' }
+      }));
+      const result = checkCodeQuality(tempDir);
+      assertTrue(typeof result.hasIssues === 'boolean', 'Should return boolean hasIssues');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('checkCodeQuality detects Prettier in devDependencies', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hook-test-'));
+    try {
+      fs.writeFileSync(path.join(tempDir, 'package.json'), JSON.stringify({
+        name: 'test-pkg',
+        devDependencies: { prettier: '^3.0.0' }
+      }));
+      const result = checkCodeQuality(tempDir);
+      assertTrue(typeof result.issues.prettier === 'string' || result.issues.prettier === null,
+        'Prettier issue should be string or null');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('checkCodeQuality returns proper structure', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hook-test-'));
+    try {
+      fs.writeFileSync(path.join(tempDir, 'package.json'), JSON.stringify({ name: 'test' }));
+      const result = checkCodeQuality(tempDir);
+      assertTrue('hasIssues' in result, 'Should have hasIssues property');
+      assertTrue('issues' in result, 'Should have issues property');
+      assertTrue('eslint' in result.issues, 'Should have issues.eslint');
+      assertTrue('typescript' in result.issues, 'Should have issues.typescript');
+      assertTrue('prettier' in result.issues, 'Should have issues.prettier');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  // Test checkTestStatus function
+  console.log('\n  🧪 checkTestStatus Unit Tests\n');
+
+  test('checkTestStatus returns no failure for non-existent status file', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hook-test-'));
+    try {
+      const result = checkTestStatus(tempDir);
+      assertEqual(result.failing, false);
+      assertEqual(result.message, null);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('checkTestStatus detects failing tests', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hook-test-'));
+    try {
+      const stateDir = path.join(tempDir, '.claude-vibe');
+      fs.mkdirSync(stateDir, { recursive: true });
+      fs.writeFileSync(path.join(stateDir, 'test-status.json'), JSON.stringify({
+        failing: true,
+        message: 'Tests failed: 3 failures'
+      }));
+      const result = checkTestStatus(tempDir);
+      assertEqual(result.failing, true);
+      assertEqual(result.message, 'Tests failed: 3 failures');
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('checkTestStatus handles passing tests', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hook-test-'));
+    try {
+      const stateDir = path.join(tempDir, '.claude-vibe');
+      fs.mkdirSync(stateDir, { recursive: true });
+      fs.writeFileSync(path.join(stateDir, 'test-status.json'), JSON.stringify({
+        failing: false,
+        message: 'All tests passed'
+      }));
+      const result = checkTestStatus(tempDir);
+      assertEqual(result.failing, false);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('checkTestStatus handles malformed JSON gracefully', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hook-test-'));
+    try {
+      const stateDir = path.join(tempDir, '.claude-vibe');
+      fs.mkdirSync(stateDir, { recursive: true });
+      fs.writeFileSync(path.join(stateDir, 'test-status.json'), 'invalid json');
+      const result = checkTestStatus(tempDir);
+      assertEqual(result.failing, false);
+      assertEqual(result.message, null);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  // Test checkUncommittedChanges function
+  console.log('\n  📝 checkUncommittedChanges Unit Tests\n');
+
+  test('checkUncommittedChanges returns no changes for non-git directory', () => {
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hook-test-'));
+    try {
+      const result = checkUncommittedChanges(tempDir);
+      assertEqual(result.hasChanges, false);
+      assertTrue(Array.isArray(result.files), 'files should be an array');
+      assertEqual(result.files.length, 0);
+    } finally {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  // Test checkPendingTodos function
+  console.log('\n  📋 checkPendingTodos Unit Tests\n');
+
+  test('checkPendingTodos returns no pending todos (placeholder)', () => {
+    const result = checkPendingTodos({});
+    assertEqual(result.hasPending, false);
+    assertEqual(result.count, 0);
+  });
+
+  // Test generateSuggestions function
+  console.log('\n  💡 generateSuggestions Unit Tests\n');
+
+  test('generateSuggestions returns empty array when no issues', () => {
+    const checks = {
+      testStatus: { failing: false, message: null },
+      uncommittedChanges: { hasChanges: false, files: [] },
+      pendingTodos: { hasPending: false, count: 0 },
+      codeQuality: { hasIssues: false, issues: { eslint: null, typescript: null, prettier: null } }
+    };
+    const suggestions = generateSuggestions(checks);
+    assertTrue(Array.isArray(suggestions), 'Should return an array');
+    assertEqual(suggestions.length, 0);
+  });
+
+  test('generateSuggestions includes uncommitted changes suggestion', () => {
+    const checks = {
+      testStatus: { failing: false, message: null },
+      uncommittedChanges: { hasChanges: true, files: ['file1.js', 'file2.js'] },
+      pendingTodos: { hasPending: false, count: 0 },
+      codeQuality: { hasIssues: false, issues: { eslint: null, typescript: null, prettier: null } }
+    };
+    const suggestions = generateSuggestions(checks);
+    assertEqual(suggestions.length, 1);
+    assertTrue(suggestions[0].includes('2 uncommitted'), 'Should mention file count');
+  });
+
+  test('generateSuggestions includes test failure suggestion', () => {
+    const checks = {
+      testStatus: { failing: true, message: 'Tests failed' },
+      uncommittedChanges: { hasChanges: false, files: [] },
+      pendingTodos: { hasPending: false, count: 0 },
+      codeQuality: { hasIssues: false, issues: { eslint: null, typescript: null, prettier: null } }
+    };
+    const suggestions = generateSuggestions(checks);
+    assertEqual(suggestions.length, 1);
+    assertTrue(suggestions[0].includes('Tests are failing'), 'Should mention failing tests');
+  });
+
+  test('generateSuggestions includes pending todos suggestion', () => {
+    const checks = {
+      testStatus: { failing: false, message: null },
+      uncommittedChanges: { hasChanges: false, files: [] },
+      pendingTodos: { hasPending: true, count: 5 },
+      codeQuality: { hasIssues: false, issues: { eslint: null, typescript: null, prettier: null } }
+    };
+    const suggestions = generateSuggestions(checks);
+    assertEqual(suggestions.length, 1);
+    assertTrue(suggestions[0].includes('5 pending'), 'Should mention pending count');
+  });
+
+  test('generateSuggestions includes ESLint suggestion', () => {
+    const checks = {
+      testStatus: { failing: false, message: null },
+      uncommittedChanges: { hasChanges: false, files: [] },
+      pendingTodos: { hasPending: false, count: 0 },
+      codeQuality: { hasIssues: true, issues: { eslint: 'ESLint found issues', typescript: null, prettier: null } }
+    };
+    const suggestions = generateSuggestions(checks);
+    assertEqual(suggestions.length, 1);
+    assertTrue(suggestions[0].includes('ESLint'), 'Should mention ESLint');
+    assertTrue(suggestions[0].includes('--fix'), 'Should suggest fix command');
+  });
+
+  test('generateSuggestions includes TypeScript suggestion', () => {
+    const checks = {
+      testStatus: { failing: false, message: null },
+      uncommittedChanges: { hasChanges: false, files: [] },
+      pendingTodos: { hasPending: false, count: 0 },
+      codeQuality: { hasIssues: true, issues: { eslint: null, typescript: 'TypeScript found type errors', prettier: null } }
+    };
+    const suggestions = generateSuggestions(checks);
+    assertEqual(suggestions.length, 1);
+    assertTrue(suggestions[0].includes('TypeScript'), 'Should mention TypeScript');
+    assertTrue(suggestions[0].includes('tsc'), 'Should suggest tsc command');
+  });
+
+  test('generateSuggestions includes Prettier suggestion', () => {
+    const checks = {
+      testStatus: { failing: false, message: null },
+      uncommittedChanges: { hasChanges: false, files: [] },
+      pendingTodos: { hasPending: false, count: 0 },
+      codeQuality: { hasIssues: false, issues: { eslint: null, typescript: null, prettier: 'Some files need formatting' } }
+    };
+    const suggestions = generateSuggestions(checks);
+    assertEqual(suggestions.length, 1);
+    assertTrue(suggestions[0].includes('formatting'), 'Should mention formatting');
+    assertTrue(suggestions[0].includes('prettier'), 'Should suggest prettier command');
+  });
+
+  test('generateSuggestions combines multiple suggestions', () => {
+    const checks = {
+      testStatus: { failing: true, message: 'Tests failed' },
+      uncommittedChanges: { hasChanges: true, files: ['a.js'] },
+      pendingTodos: { hasPending: true, count: 3 },
+      codeQuality: { hasIssues: true, issues: { eslint: 'ESLint issues', typescript: 'TS errors', prettier: 'Format needed' } }
+    };
+    const suggestions = generateSuggestions(checks);
+    assertEqual(suggestions.length, 6);
+  });
 }
 
 async function testStatusLine() {

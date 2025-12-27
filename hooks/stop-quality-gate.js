@@ -267,5 +267,16 @@ function main() {
   }
 }
 
-// Run main
-main();
+// Run main if called directly
+if (require.main === module) {
+  main();
+}
+
+// Export for testing
+module.exports = {
+  checkTestStatus,
+  checkUncommittedChanges,
+  checkPendingTodos,
+  checkCodeQuality,
+  generateSuggestions
+};
