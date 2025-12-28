@@ -1,5 +1,12 @@
 # Work Progress
 
+[x] Phase 19 BaseAnalysisService tests for ai-code-agent MCP (2025-12-29)
+    - Add 37 new tests: 1179 total tests (up from 1142)
+    - BaseAnalysisService: abstract class testing via concrete implementation
+    - Tests: generateAnalysisId, cleanOutput, isOutputWithinLimits, calculateSummary
+    - Tests: filterFindingsBySeverity, createRawOutputResult, validateCLIPath (security)
+    - Tests: resolveContext (auto-detection, warnings), addMetadata, healthCheck
+    - Coverage: analysis.service.ts 82.78% → 91.94%, overall 92.72% → 93.09%
 [x] Phase 18 WarningSystem and AnalysisStatusStore tests for ai-code-agent MCP (2025-12-27)
     - Add 65 new tests: 1142 total tests (up from 1077)
     - WarningSystem: checkContext, formatWarnings, suppress/unsuppress
