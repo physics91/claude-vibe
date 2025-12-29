@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
@@ -16,32 +16,18 @@ $ErrorActionPreference = 'Stop'
 #>
 
 #region Module Dependencies
-# Required modules: preset-manager.ps1
-
-$script:ModuleDependencies = @(
-    @{ Name = 'preset-manager'; Path = "$PSScriptRoot\preset-manager.ps1" }
-)
-
-foreach ($dep in $script:ModuleDependencies) {
-    if (-not (Test-Path -LiteralPath $dep.Path)) {
-        throw "Required module not found: $($dep.Name) at $($dep.Path)"
-    }
-    try {
-        . $dep.Path
-    }
-    catch {
-        throw "Failed to load required module '$($dep.Name)': $($_.Exception.Message)"
-    }
-}
-
+. (Join-Path $PSScriptRoot "..\utils\require-modules.ps1") -ModuleName 'project-detector'
 #endregion
 
 #region Detection Scoring Constants
 
 # Score weights for detection confidence calculation
-$script:FileDetectionScore = 10       # Score per matched file
-$script:DependencyDetectionScore = 15 # Score per matched dependency
-$script:PatternDetectionScore = 5     # Score per matched pattern
+$script:FileDetectionScore = Get-ConstantValue -Name 'DETECTION_FILE_SCORE' -Default 10       # Score per matched file
+$script:DependencyDetectionScore = Get-ConstantValue -Name 'DETECTION_DEPENDENCY_SCORE' -Default 15 # Score per matched dependency
+$script:PatternDetectionScore = Get-ConstantValue -Name 'DETECTION_PATTERN_SCORE' -Default 5     # Score per matched pattern
+
+# Minimum confidence threshold for detection results
+$script:MinDetectionConfidence = Get-ConstantValue -Name 'MIN_DETECTION_CONFIDENCE' -Default 0.3
 
 #endregion
 
@@ -370,7 +356,7 @@ function Detect-ProjectType {
 
     # Build and cache result
     $result = $null
-    if ($bestPreset -and $bestConfidence -ge 0.3) {
+    if ($bestPreset -and $bestConfidence -ge $script:MinDetectionConfidence) {
         $result = @{
             detectedType = $bestPreset
             confidence = $bestConfidence
@@ -629,3 +615,6 @@ if ($MyInvocation.MyCommand.ScriptBlock.Module) {
         'Get-DetectionCacheStats'
     )
 }
+
+
+

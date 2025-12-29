@@ -1,27 +1,9 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 #region Module Dependencies
-# Required modules: conversion-helpers.ps1
-
-$script:ModuleDependencies = @(
-    @{ Name = 'conversion-helpers'; Path = "$PSScriptRoot\..\utils\conversion-helpers.ps1" },
-    @{ Name = 'constants'; Path = "$PSScriptRoot\constants.ps1" }
-)
-
-foreach ($dep in $script:ModuleDependencies) {
-    if (-not (Test-Path -LiteralPath $dep.Path)) {
-        throw "Required module not found: $($dep.Name) at $($dep.Path)"
-    }
-    try {
-        . $dep.Path
-    }
-    catch {
-        throw "Failed to load required module '$($dep.Name)': $($_.Exception.Message)"
-    }
-}
-
+. (Join-Path $PSScriptRoot "..\utils\require-modules.ps1") -ModuleName 'preset-manager'
 #endregion
 
 <#
@@ -557,3 +539,4 @@ if ($MyInvocation.MyCommand.ScriptBlock.Module) {
         'Get-CoalescedValue'
     )
 }
+

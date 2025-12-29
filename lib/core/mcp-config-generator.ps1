@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
@@ -16,33 +16,14 @@ $ErrorActionPreference = 'Stop'
 #>
 
 #region Module Dependencies
-# Required modules: preset-manager.ps1
-
-$script:ModuleDependencies = @(
-    @{ Name = 'preset-manager'; Path = "$PSScriptRoot\preset-manager.ps1" }
-)
-
-foreach ($dep in $script:ModuleDependencies) {
-    if (-not (Test-Path -LiteralPath $dep.Path)) {
-        throw "Required module not found: $($dep.Name) at $($dep.Path)"
-    }
-    try {
-        . $dep.Path
-    }
-    catch {
-        throw "Failed to load required module '$($dep.Name)': $($_.Exception.Message)"
-    }
-}
-
+. (Join-Path $PSScriptRoot "..\utils\require-modules.ps1") -ModuleName 'mcp-config-generator'
 #endregion
-
-# Import constants for path configuration
-. "$PSScriptRoot\constants.ps1"
 
 #region Configuration
 
 # Use configurable path from constants (supports CLAUDE_CONFIG_DIR env override)
 $script:GlobalMcpConfigPath = $script:GLOBAL_MCP_CONFIG_PATH
+$script:DefaultMcpTokenEstimate = Get-ConstantValue -Name 'DEFAULT_MCP_TOKEN_ESTIMATE' -Default 5000
 
 #endregion
 
@@ -127,7 +108,7 @@ function Get-EstimatedMcpTokens {
     }
 
     # Default estimate for unknown servers
-    return 5000
+    return $script:DefaultMcpTokenEstimate
 }
 
 <#
@@ -421,3 +402,5 @@ if ($MyInvocation.MyCommand.ScriptBlock.Module) {
         'Get-EstimatedTokenSavings'
     )
 }
+
+

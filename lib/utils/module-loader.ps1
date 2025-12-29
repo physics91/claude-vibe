@@ -18,10 +18,12 @@ $ErrorActionPreference = 'Stop'
 #region Trusted Paths Configuration
 
 # Define trusted directories for module loading (dot-sourcing security)
-$script:TrustedModulePaths = @(
-    (Join-Path $PSScriptRoot ".." | Resolve-Path -ErrorAction SilentlyContinue).Path,  # lib folder
-    $PSScriptRoot  # utils folder
-)
+if (-not (Get-Variable -Name 'TrustedModulePaths' -Scope Script -ErrorAction SilentlyContinue)) {
+    $script:TrustedModulePaths = @(
+        (Join-Path $PSScriptRoot ".." | Resolve-Path -ErrorAction SilentlyContinue).Path,  # lib folder
+        $PSScriptRoot  # utils folder
+    )
+}
 
 <#
 .SYNOPSIS
@@ -68,32 +70,38 @@ function Test-TrustedPath {
 
 # Define module dependency tree
 # Key: module name, Value: array of required modules (must be loaded first)
-$script:ModuleDependencies = @{
-    # Base utilities (no dependencies)
-    'conversion-helpers' = @()
-    'constants'          = @()
-    'security'           = @()
-    'safe-access'        = @()
-    'exceptions'         = @()
-    'validation'         = @('exceptions')
+if (-not (Get-Variable -Name 'ModuleDependencies' -Scope Script -ErrorAction SilentlyContinue)) {
+    $script:ModuleDependencies = @{
+        # Base utilities (no dependencies)
+        'conversion-helpers' = @()
+        'constants'          = @()
+        'security'           = @()
+        'safe-access'        = @()
+        'exceptions'         = @()
+        'validation'         = @('exceptions')
 
-    # Core modules with dependencies
-    'storage'            = @('security', 'conversion-helpers', 'exceptions')
-    'preset-manager'     = @('conversion-helpers', 'exceptions')
-    'parser'             = @('security', 'exceptions')
-    'command-manager'    = @('conversion-helpers', 'constants', 'exceptions')
-    'mcp-config-generator' = @('preset-manager', 'exceptions')
-    'project-detector'   = @('preset-manager')
-    'prompt-analyzer'    = @()
-    'clarification-generator' = @()
-    'schema-validator'        = @('conversion-helpers', 'safe-access')
+        # Core modules with dependencies
+        'storage'               = @('security', 'conversion-helpers', 'exceptions')
+        'preset-manager'        = @('conversion-helpers', 'constants')
+        'parser'                = @('security', 'exceptions')
+        'command-manager'       = @()
+        'mcp-config-generator'  = @('conversion-helpers', 'constants')
+        'project-detector'      = @('preset-manager', 'conversion-helpers', 'constants')
+        'prompt-analyzer'       = @('constants')
+        'clarification-generator' = @()
+        'schema-validator'        = @('conversion-helpers', 'safe-access')
+    }
 }
 
 # Track loaded modules
-$script:LoadedModules = @{}
+if (-not (Get-Variable -Name 'LoadedModules' -Scope Script -ErrorAction SilentlyContinue)) {
+    $script:LoadedModules = @{}
+}
 
 # Track loading in progress (for circular dependency detection)
-$script:LoadingInProgress = @{}
+if (-not (Get-Variable -Name 'LoadingInProgress' -Scope Script -ErrorAction SilentlyContinue)) {
+    $script:LoadingInProgress = @{}
+}
 
 #endregion
 

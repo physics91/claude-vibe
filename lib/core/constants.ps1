@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
@@ -45,6 +45,7 @@ Set-Variable -Name 'AMBIGUITY_INCREMENT_STANDARD' -Value 20 -Option ReadOnly -Sc
 # Word count thresholds
 Set-Variable -Name 'MIN_WORD_COUNT_SHORT' -Value 5 -Option ReadOnly -Scope Script -ErrorAction SilentlyContinue
 Set-Variable -Name 'MIN_WORD_COUNT_CODING' -Value 10 -Option ReadOnly -Scope Script -ErrorAction SilentlyContinue
+Set-Variable -Name 'MIN_WORD_COUNT_WITH_PROJECT' -Value 15 -Option ReadOnly -Scope Script -ErrorAction SilentlyContinue
 
 #endregion
 
@@ -63,6 +64,7 @@ Set-Variable -Name 'MAX_LOCAL_DEPTH_LIMIT' -Value 10 -Option ReadOnly -Scope Scr
 
 # Scoring weights for project detection
 Set-Variable -Name 'DETECTION_FILE_SCORE' -Value 10 -Option ReadOnly -Scope Script -ErrorAction SilentlyContinue
+Set-Variable -Name 'DETECTION_DEPENDENCY_SCORE' -Value 15 -Option ReadOnly -Scope Script -ErrorAction SilentlyContinue
 Set-Variable -Name 'DETECTION_PATTERN_SCORE' -Value 5 -Option ReadOnly -Scope Script -ErrorAction SilentlyContinue
 
 # Minimum confidence threshold for project detection
@@ -204,10 +206,12 @@ if ($MyInvocation.MyCommand.ScriptBlock.Module) {
         'AMBIGUITY_INCREMENT_STANDARD',
         'MIN_WORD_COUNT_SHORT',
         'MIN_WORD_COUNT_CODING',
+        'MIN_WORD_COUNT_WITH_PROJECT',
         'DEFAULT_MAX_AGENTS_MD_SIZE_KB',
         'DEFAULT_LOCAL_MAX_DEPTH',
         'MAX_LOCAL_DEPTH_LIMIT',
         'DETECTION_FILE_SCORE',
+        'DETECTION_DEPENDENCY_SCORE',
         'DETECTION_PATTERN_SCORE',
         'MIN_DETECTION_CONFIDENCE',
         'DEFAULT_MCP_TOKEN_ESTIMATE',
@@ -227,3 +231,4 @@ if ($MyInvocation.MyCommand.ScriptBlock.Module) {
 }
 
 #endregion
+

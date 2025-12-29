@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
@@ -16,24 +16,7 @@ $ErrorActionPreference = 'Stop'
 #>
 
 #region Module Dependencies
-
-$script:ModuleDependencies = @(
-    @{ Name = 'conversion-helpers'; Path = "$PSScriptRoot\conversion-helpers.ps1" },
-    @{ Name = 'safe-access'; Path = "$PSScriptRoot\safe-access.ps1" }
-)
-
-foreach ($dep in $script:ModuleDependencies) {
-    if (-not (Test-Path -LiteralPath $dep.Path)) {
-        throw "Required module not found: $($dep.Name) at $($dep.Path)"
-    }
-    try {
-        . $dep.Path
-    }
-    catch {
-        throw "Failed to load required module '$($dep.Name)': $($_.Exception.Message)"
-    }
-}
-
+. (Join-Path $PSScriptRoot "require-modules.ps1") -ModuleName 'schema-validator'
 #endregion
 
 #region Constants
@@ -807,3 +790,4 @@ if ($MyInvocation.MyCommand.ScriptBlock.Module) {
         'Format-ValidationResult'
     )
 }
+

@@ -1,4 +1,4 @@
-#Requires -Version 5.1
+﻿#Requires -Version 5.1
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
@@ -16,23 +16,7 @@ $ErrorActionPreference = 'Stop'
 #>
 
 #region Module Dependencies
-
-$script:ModuleDependencies = @(
-    @{ Name = 'constants'; Path = "$PSScriptRoot\constants.ps1" }
-)
-
-foreach ($dep in $script:ModuleDependencies) {
-    if (-not (Test-Path -LiteralPath $dep.Path)) {
-        throw "Required module not found: $($dep.Name) at $($dep.Path)"
-    }
-    try {
-        . $dep.Path
-    }
-    catch {
-        throw "Failed to load required module '$($dep.Name)': $($_.Exception.Message)"
-    }
-}
-
+. (Join-Path $PSScriptRoot "..\utils\require-modules.ps1") -ModuleName 'prompt-analyzer'
 #endregion
 
 #region Configuration Constants
@@ -48,9 +32,9 @@ $script:SCORE_INSUFFICIENT_REQUIREMENTS = 20
 $script:SCORE_MISSING_TECH_STACK = 15
 
 # Thresholds
-$script:MIN_WORD_COUNT = 5
-$script:MIN_WORD_COUNT_WITH_PROJECT = 15
-$script:MIN_WORD_COUNT_CREATE = 10
+$script:MIN_WORD_COUNT = Get-ConstantValue -Name 'MIN_WORD_COUNT_SHORT' -Default 5
+$script:MinWordCountWithProject = Get-ConstantValue -Name 'MIN_WORD_COUNT_WITH_PROJECT' -Default 15
+$script:MIN_WORD_COUNT_CREATE = Get-ConstantValue -Name 'MIN_WORD_COUNT_CODING' -Default 10
 $script:MAX_PRONOUN_COUNT = 2
 
 # Detection patterns
@@ -233,7 +217,7 @@ function Test-PromptAmbiguity {
 
     # 4. Check for project type without specifics
     $hasProjectType = Test-PatternMatch -Text $Prompt -Patterns $script:PROJECT_TYPES
-    if ($hasProjectType -and $wordCount -lt $script:MIN_WORD_COUNT_WITH_PROJECT) {
+    if ($hasProjectType -and $wordCount -lt $script:MinWordCountWithProject) {
         $ambiguityScore += $script:SCORE_MISSING_DETAILS
         $ambiguityReasons += "MISSING_DETAILS"
         $questions += "What are the main features needed?"
@@ -301,3 +285,6 @@ if ($MyInvocation.MyCommand.ScriptBlock.Module) {
 }
 
 #endregion
+
+
+
