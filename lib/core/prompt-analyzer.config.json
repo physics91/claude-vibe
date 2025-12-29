@@ -1,0 +1,91 @@
+{
+  "threshold": 40,
+  "maxPronounCount": 2,
+  "minWordCounts": {
+    "short": 5,
+    "coding": 10,
+    "withProject": 15
+  },
+  "scores": {
+    "TOO_SHORT": 30,
+    "VAGUE_VERB": 15,
+    "EXCESSIVE_PRONOUNS": 20,
+    "MISSING_DETAILS": 25,
+    "MISSING_CODE_CONTEXT": 20,
+    "VAGUE_OPTIMIZATION": 15,
+    "INSUFFICIENT_REQUIREMENTS": 20,
+    "MISSING_TECH_STACK": 15
+  },
+  "patterns": {
+    "vagueVerbs": [
+      "fix",
+      "change",
+      "improve",
+      "optimize",
+      "handle",
+      "update",
+      "modify"
+    ],
+    "pronouns": [
+      "this",
+      "that",
+      "it",
+      "these",
+      "those"
+    ],
+    "projectTypes": [
+      "website",
+      "app",
+      "application",
+      "system",
+      "tool",
+      "service",
+      "program"
+    ],
+    "codingKeywords": [
+      "code",
+      "function",
+      "class",
+      "method",
+      "module",
+      "component"
+    ],
+    "fileExtensions": [
+      "js",
+      "py",
+      "java",
+      "ts",
+      "ps1",
+      "md"
+    ],
+    "optimizationAspects": [
+      "performance",
+      "speed",
+      "memory",
+      "size",
+      "readability"
+    ],
+    "techStackKeywords": [
+      "mysql",
+      "postgres",
+      "mongodb",
+      "sqlite",
+      "redis",
+      "rest",
+      "graphql"
+    ],
+    "creationVerbs": [
+      "create",
+      "make",
+      "build"
+    ],
+    "databaseKeywords": [
+      "database",
+      "db",
+      "api"
+    ],
+    "optimizeKeywords": [
+      "optimize"
+    ]
+  }
+}

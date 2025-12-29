@@ -38,14 +38,58 @@ Set-Variable -Name 'DEEP_JSON_DEPTH' -Value 10 -Option ReadOnly -Scope Script -E
 
 #region Prompt Analyzer Constants
 
+# Load prompt analyzer config for SSOT with cross-platform rules
+$script:PromptAnalyzerConfig = $null
+$promptConfigPath = Join-Path $PSScriptRoot 'prompt-analyzer.config.json'
+if (Test-Path -LiteralPath $promptConfigPath) {
+    try {
+        $script:PromptAnalyzerConfig = (Get-Content -LiteralPath $promptConfigPath -Raw -Encoding UTF8) | ConvertFrom-Json -ErrorAction Stop
+    }
+    catch {
+        $script:PromptAnalyzerConfig = $null
+    }
+}
+
+function Get-PromptAnalyzerInt {
+    [CmdletBinding()]
+    [OutputType([int])]
+    param(
+        [Parameter(Mandatory = $true)]
+        $Value,
+
+        [Parameter(Mandatory = $true)]
+        [int]$Default
+    )
+
+    if ($null -eq $Value) {
+        return $Default
+    }
+
+    try {
+        $parsed = [int]$Value
+        if ($parsed -gt 0) {
+            return $parsed
+        }
+    }
+    catch {
+        # Fall through to default
+    }
+
+    return $Default
+}
+
 # Ambiguity scoring thresholds
-Set-Variable -Name 'AMBIGUITY_THRESHOLD' -Value 40 -Option ReadOnly -Scope Script -ErrorAction SilentlyContinue
+$threshold = Get-PromptAnalyzerInt -Value $script:PromptAnalyzerConfig.threshold -Default 40
+Set-Variable -Name 'AMBIGUITY_THRESHOLD' -Value $threshold -Option ReadOnly -Scope Script -ErrorAction SilentlyContinue
 Set-Variable -Name 'AMBIGUITY_INCREMENT_STANDARD' -Value 20 -Option ReadOnly -Scope Script -ErrorAction SilentlyContinue
 
 # Word count thresholds
-Set-Variable -Name 'MIN_WORD_COUNT_SHORT' -Value 5 -Option ReadOnly -Scope Script -ErrorAction SilentlyContinue
-Set-Variable -Name 'MIN_WORD_COUNT_CODING' -Value 10 -Option ReadOnly -Scope Script -ErrorAction SilentlyContinue
-Set-Variable -Name 'MIN_WORD_COUNT_WITH_PROJECT' -Value 15 -Option ReadOnly -Scope Script -ErrorAction SilentlyContinue
+$minShort = Get-PromptAnalyzerInt -Value $script:PromptAnalyzerConfig.minWordCounts.short -Default 5
+$minCoding = Get-PromptAnalyzerInt -Value $script:PromptAnalyzerConfig.minWordCounts.coding -Default 10
+$minWithProject = Get-PromptAnalyzerInt -Value $script:PromptAnalyzerConfig.minWordCounts.withProject -Default 15
+Set-Variable -Name 'MIN_WORD_COUNT_SHORT' -Value $minShort -Option ReadOnly -Scope Script -ErrorAction SilentlyContinue
+Set-Variable -Name 'MIN_WORD_COUNT_CODING' -Value $minCoding -Option ReadOnly -Scope Script -ErrorAction SilentlyContinue
+Set-Variable -Name 'MIN_WORD_COUNT_WITH_PROJECT' -Value $minWithProject -Option ReadOnly -Scope Script -ErrorAction SilentlyContinue
 
 #endregion
 

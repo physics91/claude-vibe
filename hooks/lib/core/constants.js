@@ -9,6 +9,29 @@
  */
 
 'use strict';
+const fs = require('fs');
+const path = require('path');
+
+const PROMPT_ANALYZER_CONFIG_PATH = path.join(
+  __dirname,
+  '..',
+  '..',
+  '..',
+  'lib',
+  'core',
+  'prompt-analyzer.config.json'
+);
+
+function readPromptAnalyzerConfig() {
+  try {
+    const raw = fs.readFileSync(PROMPT_ANALYZER_CONFIG_PATH, 'utf8').replace(/^\uFEFF/, '');
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+const promptAnalyzerConfig = readPromptAnalyzerConfig();
 
 /**
  * File size limits
@@ -99,13 +122,27 @@ const TOKEN_ESTIMATES = {
 /**
  * Prompt ambiguity detection weights
  */
-const AMBIGUITY_WEIGHTS = {
+const AMBIGUITY_WEIGHTS = promptAnalyzerConfig ? {
+  TOO_SHORT: Number(promptAnalyzerConfig.scores?.TOO_SHORT) || 30,
+  VAGUE_VERB: Number(promptAnalyzerConfig.scores?.VAGUE_VERB) || 15,
+  EXCESSIVE_PRONOUNS: Number(promptAnalyzerConfig.scores?.EXCESSIVE_PRONOUNS) || 20,
+  MISSING_DETAILS: Number(promptAnalyzerConfig.scores?.MISSING_DETAILS) || 25,
+  MISSING_CODE_CONTEXT: Number(promptAnalyzerConfig.scores?.MISSING_CODE_CONTEXT) || 20,
+  VAGUE_OPTIMIZATION: Number(promptAnalyzerConfig.scores?.VAGUE_OPTIMIZATION) || 15,
+  INSUFFICIENT_REQUIREMENTS: Number(promptAnalyzerConfig.scores?.INSUFFICIENT_REQUIREMENTS) || 20,
+  MISSING_TECH_STACK: Number(promptAnalyzerConfig.scores?.MISSING_TECH_STACK) || 15,
+  NO_TECH_STACK: Number(promptAnalyzerConfig.scores?.MISSING_TECH_STACK) || 15,
+  THRESHOLD: Number(promptAnalyzerConfig.threshold) || 40
+} : {
   TOO_SHORT: 30,
   VAGUE_VERB: 15,
   EXCESSIVE_PRONOUNS: 20,
   MISSING_DETAILS: 25,
-  NO_TECH_STACK: 20,
-  MISSING_CODE_CONTEXT: 15,
+  MISSING_CODE_CONTEXT: 20,
+  VAGUE_OPTIMIZATION: 15,
+  INSUFFICIENT_REQUIREMENTS: 20,
+  MISSING_TECH_STACK: 15,
+  NO_TECH_STACK: 15,
   THRESHOLD: 40
 };
 
